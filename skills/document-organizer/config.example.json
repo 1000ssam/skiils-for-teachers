@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "default_profile": "work",
+  "profiles": {
+    "work": {
+      "name": "업무용 공문 폴더",
+      "path": "C:\\Users\\{사용자명}\\Desktop\\공문 모음",
+      "last_used": null
+    }
+  }
+}

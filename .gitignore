@@ -1,0 +1,11 @@
+# 사용자별 설정 파일 (개인 경로 포함)
+**/config.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+*.swp
+*~

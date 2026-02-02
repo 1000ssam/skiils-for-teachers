@@ -88,30 +88,26 @@ git clone https://github.com/slowly007-beep/skiils-for-teachers.git
 둘 다 한번에 설치 (추천):
 
 ```powershell
-# skills 폴더 안의 모든 스킬을 .claude\skills\ 폴더로 복사합니다
 Copy-Item -Recurse skiils-for-teachers\skills\* $env:USERPROFILE\.claude\skills\
 ```
 
 document-organizer만 설치:
 
 ```powershell
-# document-organizer 스킬만 .claude\skills\ 폴더로 복사합니다
 Copy-Item -Recurse skiils-for-teachers\skills\document-organizer $env:USERPROFILE\.claude\skills\
 ```
 
 handover-generator만 설치:
 
 ```powershell
-# handover-generator 스킬만 .claude\skills\ 폴더로 복사합니다
 Copy-Item -Recurse skiils-for-teachers\skills\handover-generator $env:USERPROFILE\.claude\skills\
 ```
 
 #### 설치 확인
 
-**3단계.** 파일이 제대로 복사되었는지 확인합니다:
+**3단계.** 아래 명령어로 파일이 제대로 복사되었는지 확인합니다:
 
 ```powershell
-# .claude\skills 폴더 안에 어떤 폴더가 있는지 확인합니다
 ls $env:USERPROFILE\.claude\skills\
 ```
 

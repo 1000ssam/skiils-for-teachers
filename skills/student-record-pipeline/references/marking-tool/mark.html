@@ -1,0 +1,1162 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>세특 마킹</title>
+<style>
+/* ═══ 디자인 토큰 ═════════════════════════════════════════════════════════════
+   2단 구성: 원색(--p-*) → 시맨틱(--surface/text/border/accent/st-*).
+   컴포넌트 CSS는 **시맨틱만** 참조한다. 색을 컴포넌트에 직접 박지 않는 이유:
+   상태색(굽는 중·초안·확정·보류)이 화면 세 곳(레일 점 · 배지 · 배너)에 동시에 나타나
+   한 곳만 고치면 반드시 어긋나기 때문이다. 상태 = 토큰 한 줄이 단일 출처다. */
+:root{
+  /* 원색 — 여기서만 실제 색값을 쓴다 */
+  --p-white:#ffffff;
+  --p-gray-25:#fbfcfd;  --p-gray-50:#f6f7f9;  --p-gray-100:#eef0f3; --p-gray-150:#e6e9ed;
+  --p-gray-200:#dde1e6; --p-gray-300:#c6ccd3; --p-gray-400:#9aa2ab;
+  --p-gray-500:#6b7280; --p-gray-700:#414851; --p-gray-900:#1a1e23;
+  --p-blue-50:#f1f6fd;  --p-blue-100:#d9e6fa; --p-blue-500:#3b76dd; --p-blue-600:#2f6bd6; --p-blue-700:#2258b4;
+  --p-amber-50:#fffaeb; --p-amber-100:#fbeec2; --p-amber-200:#f3dd93;
+  --p-amber-400:#f0c000; --p-amber-600:#a67c00; --p-amber-800:#6b5000;
+  --p-green-50:#eef8f2; --p-green-100:#d5ebdf; --p-green-200:#b2dcc3; --p-green-300:#8fcfa9;
+  --p-green-500:#2f8f5b; --p-green-600:#227a4a; --p-green-700:#1a5f39;
+  --p-red-50:#fdeeec;   --p-red-100:#f8d6d1;  --p-red-300:#e2a49b;  --p-red-600:#c0392b;
+  --p-violet-50:#f6f3fc;--p-violet-100:#e5dcf5;--p-violet-300:#c0aee0;--p-violet-600:#6b4fa0;
+
+  /* 면 */
+  --surface-page:var(--p-gray-50);
+  --surface-raised:var(--p-white);
+  --surface-sunken:var(--p-gray-25);
+  --surface-rail:var(--p-white);
+  --surface-hover:var(--p-gray-50);
+  --surface-selected:var(--p-green-50);
+  --surface-inset:var(--p-gray-100);
+
+  /* 글자 */
+  --text-strong:var(--p-gray-900);
+  --text-default:var(--p-gray-700);
+  --text-muted:var(--p-gray-500);
+  --text-faint:var(--p-gray-400);
+  --text-onaccent:var(--p-white);
+
+  /* 선 — 깊이는 장식이 아니라 위계 신호로만 쓴다. 그림자는 떠 있는 것(스티키)에만. */
+  --border-subtle:var(--p-gray-150);
+  --border-default:var(--p-gray-200);
+  --border-strong:var(--p-gray-300);
+  --shadow-sticky:0 1px 0 var(--p-gray-150);
+  --shadow-raise:0 -1px 0 var(--p-gray-150);
+
+  /* 강조(프라이머리) — 그린 계열.
+     확정도 초록이다. 둘은 같은 축이라 색을 나눌 이유가 없다(선택·확정 모두 '되었다'는 신호).
+     대신 **'초안 나옴'은 프라이머리에서 떼어 파랑으로 둔다** — 아래 --st-draft-* 참조.
+     같은 초록이면 '읽고 확정한 것'과 '나왔지만 아직 안 읽은 것'이 한눈에 안 갈린다. */
+  --accent:var(--p-green-600);
+  --accent-hover:var(--p-green-700);
+  --accent-surface:var(--p-green-50);
+  --accent-border:var(--p-green-200);
+  --focus-ring:0 0 0 3px var(--p-green-100);
+
+  /* 형광펜 */
+  --hl-surface:var(--p-amber-100);
+  --hl-underline:var(--p-amber-400);
+  --hl-num:var(--p-amber-800);
+  --hl-active:var(--p-amber-200);
+
+  /* 상태 4종 — 레일 점·배지·배너가 공유한다 */
+  --st-none-fg:var(--text-faint);    --st-none-bg:var(--p-white);     --st-none-bd:var(--p-gray-300);
+  --st-bake-fg:var(--p-amber-600);   --st-bake-bg:var(--p-amber-50);  --st-bake-bd:var(--p-amber-200);
+  /* 초안 나옴 = "봐야 할 것". 프라이머리(초록)와 같은 색이면 확정과 섞인다 — 파랑으로 둔다. */
+  --st-draft-fg:var(--p-blue-600);   --st-draft-bg:var(--p-blue-50);  --st-draft-bd:var(--p-blue-100);
+  --st-ok-fg:var(--p-green-500);     --st-ok-bg:var(--p-green-50);    --st-ok-bd:var(--p-green-300);
+  --st-hold-fg:var(--p-violet-600);  --st-hold-bg:var(--p-violet-50); --st-hold-bd:var(--p-violet-300);
+  --st-danger-fg:var(--p-red-600);   --st-danger-bg:var(--p-red-50);  --st-danger-bd:var(--p-red-300);
+
+  /* 여백·크기 — 하루 종일 사는 화면이라 compact 를 기본값으로 잡는다 */
+  --sp-1:4px; --sp-2:6px; --sp-3:10px; --sp-4:14px; --sp-5:20px; --sp-6:28px;
+  --r-sm:5px; --r-md:8px; --r-lg:11px; --r-pill:999px;
+  --fs-xs:11.5px; --fs-sm:12.5px; --fs-md:13.5px; --fs-lg:15px; --fs-xl:17px; --fs-read:15.5px;
+  --lh-tight:1.35; --lh-body:1.6; --lh-read:1.85;
+  --rail-w:232px; --sum-w:300px; --topbar-h:46px;
+  --dur:.13s;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--surface-page);color:var(--text-default);
+  font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif;
+  font-size:var(--fs-md);line-height:var(--lh-body);
+  /* 한글은 단어 중간에서 끊기면 읽는 속도가 무너진다 */
+  word-break:keep-all;overflow-wrap:break-word;}
+button,input,textarea,select{font:inherit;color:inherit}
+button{border:1px solid var(--border-default);background:var(--surface-raised);border-radius:var(--r-sm);
+  padding:var(--sp-2) var(--sp-3);cursor:pointer;transition:border-color var(--dur),color var(--dur),background var(--dur)}
+button:hover:not(:disabled){border-color:var(--border-strong);color:var(--text-strong)}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:var(--accent)}
+input[type=text],input:not([type]),textarea,select{border:1px solid var(--border-default);border-radius:var(--r-sm);
+  background:var(--surface-raised);padding:var(--sp-2) var(--sp-3);width:100%}
+textarea{resize:vertical;line-height:var(--lh-body)}
+.ic{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;
+    stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px}
+.ic-lg{width:16px;height:16px}
+.mut{color:var(--text-muted)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ═══ 상단 바 ═══════════════════════════════════════════════════════════════ */
+.topbar{height:var(--topbar-h);display:flex;align-items:center;gap:var(--sp-4);
+  padding:0 var(--sp-4);background:var(--surface-raised);border-bottom:1px solid var(--border-subtle);
+  position:sticky;top:0;z-index:20}
+.brand{font-size:var(--fs-md);font-weight:700;color:var(--text-strong);letter-spacing:-.01em;white-space:nowrap}
+/* 화면 전환 — 마킹과 검수는 다른 일이다. 한 화면에 겹치면 둘 다 나빠진다(Prodigy). */
+.views{display:flex;background:var(--surface-inset);border-radius:var(--r-sm);padding:2px;gap:2px}
+.views button{border:none;background:transparent;color:var(--text-muted);font-size:var(--fs-sm);font-weight:600;
+  padding:var(--sp-1) var(--sp-4);border-radius:calc(var(--r-sm) - 1px);display:flex;align-items:center;gap:var(--sp-2)}
+.views button.on{background:var(--surface-raised);color:var(--text-strong);box-shadow:var(--shadow-sticky)}
+.views .cnt{font-size:var(--fs-xs);color:var(--text-faint);font-variant-numeric:tabular-nums}
+.views button.on .cnt{color:var(--accent)}
+.tally{margin-left:auto;display:flex;align-items:center;gap:var(--sp-4);font-size:var(--fs-sm);color:var(--text-muted);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.tally b{font-weight:600;color:var(--text-default)}
+.help{position:relative}
+.help>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:var(--sp-2);
+  font-size:var(--fs-sm);color:var(--text-muted);padding:var(--sp-1) var(--sp-2);border-radius:var(--r-sm)}
+.help>summary::-webkit-details-marker{display:none}
+.help>summary:hover{background:var(--surface-hover);color:var(--text-default)}
+.help .sheet{position:absolute;right:0;top:calc(100% + 6px);width:390px;background:var(--surface-raised);
+  border:1px solid var(--border-default);border-radius:var(--r-md);padding:var(--sp-4);z-index:30;
+  font-size:var(--fs-sm);line-height:var(--lh-body);color:var(--text-muted);box-shadow:0 6px 22px rgba(26,30,35,.13)}
+.help .sheet b{color:var(--text-strong)}
+.help .sheet p{margin:0 0 var(--sp-3)}
+.help .sheet p:last-child{margin:0}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:var(--sp-1) var(--sp-3);margin-top:var(--sp-2)}
+kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface-inset);border:1px solid var(--border-default);
+  border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--text-default)}
+
+/* ═══ 셸: 레일 + 작업영역 ═══════════════════════════════════════════════════ */
+.shell{display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);height:calc(100vh - var(--topbar-h))}
+.rail{display:flex;flex-direction:column;min-height:0;background:var(--surface-rail);
+  border-right:1px solid var(--border-subtle)}
+.rail-head{padding:var(--sp-3);border-bottom:1px solid var(--border-subtle)}
+.rail-head select{font-size:var(--fs-md);font-weight:600;color:var(--text-strong);cursor:pointer}
+.rail-list{flex:1;min-height:0;overflow-y:auto;padding:var(--sp-2) var(--sp-2) var(--sp-4)}
+.ri{display:flex;align-items:center;gap:var(--sp-3);width:100%;border:1px solid transparent;background:transparent;
+  padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);text-align:left;line-height:var(--lh-tight)}
+.ri:hover:not(:disabled){background:var(--surface-hover);border-color:transparent}
+.ri.is-sel{background:var(--surface-selected);border-color:var(--accent-border)}
+.ri.is-sel .ri-nm{color:var(--accent);font-weight:700}
+.ri-nm{font-size:var(--fs-md);color:var(--text-default);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri-hb{margin-left:auto;font-size:var(--fs-xs);color:var(--text-faint);font-variant-numeric:tabular-nums}
+.ri-rj{font-size:var(--fs-xs);font-weight:700;color:var(--st-danger-fg);background:var(--st-danger-bg);
+  border-radius:var(--r-pill);padding:0 5px}
+/* 진행 점 — ○미작업 ◐굽는 중 ●초안 ●확정 ⏸보류. 글자 대신 형태·색으로만 구분한다. */
+.dot{width:9px;height:9px;border-radius:50%;flex:none;border:1.5px solid var(--st-none-bd);background:var(--st-none-bg)}
+.dot--bake{border-color:var(--st-bake-bd);background:var(--st-bake-bg);
+  box-shadow:inset 0 -5px 0 var(--st-bake-fg);animation:bake 1.6s ease-in-out infinite}
+.dot--draft{border-color:var(--st-draft-fg);background:var(--st-draft-fg)}
+.dot--ok{border-color:var(--st-ok-fg);background:var(--st-ok-fg)}
+.dot--hold{border-color:var(--st-hold-fg);background:var(--st-hold-bg);box-shadow:inset 0 0 0 2px var(--st-hold-fg)}
+@keyframes bake{0%,100%{opacity:.45}50%{opacity:1}}
+.rail-foot{border-top:1px solid var(--border-subtle);padding:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2)}
+.rail-foot .prog{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);color:var(--text-muted)}
+.rail-foot .prog b{color:var(--text-strong);font-variant-numeric:tabular-nums}
+.bar{height:3px;background:var(--surface-inset);border-radius:var(--r-pill);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--st-ok-fg);transition:width var(--dur)}
+/* 활동 맥락 = 반 단위 1회 입력. 학생 컬럼에 두면 172번 스쳐 지나가므로 레일 바닥에 고정한다. */
+.ctxbox summary{list-style:none;cursor:pointer;font-size:var(--fs-xs);font-weight:600;color:var(--text-muted);
+  display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-1) 0}
+.ctxbox summary::-webkit-details-marker{display:none}
+.ctxbox textarea{font-size:var(--fs-sm);min-height:64px;margin-top:var(--sp-2)}
+
+/* ═══ 작업영역 ═════════════════════════════════════════════════════════════ */
+.work{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--surface-page)}
+.whead{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-5);
+  background:var(--surface-raised);border-bottom:1px solid var(--border-subtle);box-shadow:var(--shadow-sticky);z-index:5}
+.whead .nm{font-size:var(--fs-xl);font-weight:700;color:var(--text-strong);letter-spacing:-.02em}
+.whead .hb{font-size:var(--fs-sm);color:var(--text-faint);font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--text-muted);
+  border:1px solid var(--border-subtle);border-radius:var(--r-pill);padding:1px var(--sp-3);white-space:nowrap}
+.chip .pip{width:6px;height:6px;border-radius:50%;background:var(--text-faint)}
+.badge{margin-left:auto;display:inline-flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-sm);font-weight:600;
+  border:1px solid var(--st-none-bd);background:var(--st-none-bg);color:var(--text-muted);
+  border-radius:var(--r-pill);padding:2px var(--sp-4)}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.8}
+.badge.b-bake{border-color:var(--st-bake-bd);background:var(--st-bake-bg);color:var(--st-bake-fg)}
+.badge.b-draft{border-color:var(--st-draft-bd);background:var(--st-draft-bg);color:var(--st-draft-fg)}
+.badge.b-ok{border-color:var(--st-ok-bd);background:var(--st-ok-bg);color:var(--st-ok-fg)}
+.badge.b-hold{border-color:var(--st-hold-bd);background:var(--st-hold-bg);color:var(--st-hold-fg)}
+.goto{display:inline-flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-sm);font-weight:600;
+  border-color:var(--accent-border);color:var(--accent);background:var(--accent-surface)}
+.goto:hover:not(:disabled){border-color:var(--accent);color:var(--accent-hover)}
+.blank{margin:auto;text-align:center;color:var(--text-faint);font-size:var(--fs-md);padding:var(--sp-6);max-width:420px}
+.blank .ic{width:26px;height:26px;stroke-width:1.2;margin-bottom:var(--sp-3);display:block;margin-inline:auto}
+
+/* ── 마킹 화면: 원문 / 주석 / 총평 3컬럼 ───────────────────────────────────
+   위아래로 오가지 않게 세 가지 일을 나란히 둔다. 각 컬럼이 따로 스크롤한다. */
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) var(--sum-w)}
+.col{min-height:0;overflow-y:auto;border-left:1px solid var(--border-subtle);display:flex;flex-direction:column}
+.col:first-child{border-left:none}
+.col.c-sum{background:var(--surface-raised)}
+.chead{position:sticky;top:0;z-index:2;background:inherit;padding:var(--sp-3) var(--sp-4) var(--sp-2);
+  font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--text-faint);text-transform:uppercase;
+  border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:var(--sp-2)}
+.col:not(.c-sum) .chead{background:var(--surface-page)}
+.chead .n{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;font-size:var(--fs-xs)}
+.cbody{padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-4)}
+
+.sec .lbl{font-size:var(--fs-xs);font-weight:700;color:var(--text-muted);margin-bottom:var(--sp-2);
+  display:flex;gap:var(--sp-2);align-items:baseline}
+.sec .lbl .tip{font-weight:400;color:var(--text-faint)}
+.src{white-space:pre-wrap;background:var(--surface-raised);border:1px solid var(--border-subtle);border-radius:var(--r-md);
+  padding:var(--sp-4);font-size:var(--fs-read);line-height:var(--lh-read);color:var(--text-strong);
+  user-select:text;cursor:text}
+.src mark{background:var(--hl-surface);box-shadow:inset 0 -2px 0 var(--hl-underline);border-radius:2px;padding:0 1px}
+.src mark::after{content:attr(data-n);font-size:.6em;font-weight:800;color:var(--hl-num);
+  vertical-align:super;margin-left:1px;line-height:0}
+.src mark.flash{background:var(--hl-active);box-shadow:inset 0 -2px 0 var(--hl-num)}
+
+/* 주석 = 칠한 구간마다 '왜'. 원문과 나란히 있어야 손이 왔다 갔다 하지 않는다. */
+.ann{display:flex;gap:var(--sp-3);align-items:flex-start;background:var(--surface-raised);border:1px solid var(--border-subtle);
+  border-radius:var(--r-md);padding:var(--sp-3);transition:border-color var(--dur)}
+.ann:hover{border-color:var(--hl-underline)}
+.ann-n{flex:none;width:19px;height:19px;border-radius:50%;background:var(--hl-surface);color:var(--hl-num);
+  font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-variant-numeric:tabular-nums}
+.ann-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--sp-2)}
+.ann-tag{font-size:var(--fs-xs);font-weight:700;color:var(--hl-num)}
+.ann-txt{font-size:var(--fs-sm);color:var(--text-muted);line-height:var(--lh-tight);
+  border-left:2px solid var(--hl-underline);padding-left:var(--sp-3)}
+/* '왜'는 한 줄로 안 끝난다. 입력칸이 잘리면 나중에 다시 읽을 수 없어 검수에서 쓸모가 없어진다. */
+.ann-why{font-size:var(--fs-md);min-height:34px;resize:none;overflow:hidden;line-height:var(--lh-tight)}
+.ann-why:placeholder-shown{border-style:dashed;background:var(--surface-sunken)}
+.ann-rm{flex:none;border:none;background:transparent;color:var(--text-faint);padding:2px}
+.ann-rm:hover{color:var(--st-danger-fg);background:var(--st-danger-bg)}
+.empty{border:1px dashed var(--st-bake-bd);background:var(--st-bake-bg);color:var(--st-bake-fg);
+  border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm);line-height:var(--lh-body)}
+.empty b{color:var(--p-amber-800)}
+
+/* 총평 = 이 학생 전체에 대한 판단 + 요청 버튼 */
+.fld{display:flex;flex-direction:column;gap:var(--sp-2)}
+.fld>label{font-size:var(--fs-xs);font-weight:700;color:var(--text-muted)}
+.fld .sub{font-weight:400;color:var(--text-faint)}
+.seg{display:flex;border:1px solid var(--border-default);border-radius:var(--r-sm);overflow:hidden}
+.seg button{flex:1;border:none;border-radius:0;border-left:1px solid var(--border-default);color:var(--text-muted);
+  font-size:var(--fs-sm);padding:var(--sp-2) 0;background:var(--surface-raised)}
+.seg button:first-child{border-left:none}
+.seg button.on{background:var(--accent);color:var(--text-onaccent)}
+.seg button.on:hover{color:var(--text-onaccent)}
+.warn-line{font-size:var(--fs-xs);color:var(--st-bake-fg);display:flex;gap:var(--sp-2);align-items:flex-start}
+.req{display:flex;align-items:center;gap:var(--sp-3);width:100%;border:1px solid var(--accent-border);
+  background:var(--accent-surface);color:var(--accent);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);
+  font-size:var(--fs-md);font-weight:700;cursor:pointer;transition:background var(--dur),border-color var(--dur)}
+.req:hover{border-color:var(--accent)}
+.req input{width:16px;height:16px;margin:0;accent-color:var(--accent);flex:none}
+.req .sub{font-weight:400;font-size:var(--fs-xs);color:var(--text-muted);margin-left:auto}
+.req.on{background:var(--st-bake-bg);border-color:var(--st-bake-bd);color:var(--st-bake-fg)}
+.req.on .sub{color:var(--st-bake-fg)}
+.savebar{font-size:var(--fs-xs);color:var(--text-faint);display:flex;align-items:center;gap:var(--sp-2);min-height:18px}
+.savebar.ok{color:var(--st-ok-fg)}
+.hr{border-top:1px solid var(--border-subtle);margin:var(--sp-1) 0}
+
+/* ── 검수 화면 ────────────────────────────────────────────────────────────── */
+.rv{flex:1;min-height:0;overflow-y:auto}
+.rv-in{max-width:780px;margin:0 auto;padding:var(--sp-5) var(--sp-5) var(--sp-6);display:flex;flex-direction:column;gap:var(--sp-4)}
+.plabel{font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);
+  display:flex;align-items:baseline;gap:var(--sp-2)}
+.plabel .sub{font-weight:400;letter-spacing:0;text-transform:none;color:var(--text-faint)}
+.setuk{background:var(--surface-raised);border:1px solid var(--border-default);border-radius:var(--r-lg);
+  padding:var(--sp-5);font-size:var(--fs-read);line-height:var(--lh-read);color:var(--text-strong)}
+.bytes{display:flex;align-items:center;gap:var(--sp-3);font-size:var(--fs-sm);color:var(--text-muted)}
+.bytes .n{font-variant-numeric:tabular-nums;font-weight:600}
+.bytes .gauge{flex:1;max-width:240px;height:4px;background:var(--surface-inset);border-radius:var(--r-pill);overflow:hidden}
+.bytes .gauge i{display:block;height:100%;background:var(--st-ok-fg)}
+.bytes.over{color:var(--st-danger-fg)} .bytes.over .gauge i{background:var(--st-danger-fg)}
+.led{border:1px solid var(--border-subtle);border-radius:var(--r-md);overflow:hidden;background:var(--surface-raised)}
+.led .row{display:flex;gap:var(--sp-4);padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--border-subtle);font-size:var(--fs-sm)}
+.led .row:first-child{border-top:none}
+.led .claim{flex:1.1;color:var(--text-strong)}
+.led .span{flex:1;color:var(--text-muted)}
+.led .span b{display:block;font-size:var(--fs-xs);font-weight:700;color:var(--text-faint);margin-bottom:1px}
+.led .row.noev .span b{color:var(--st-bake-fg)}
+.chk{display:flex;flex-direction:column;gap:var(--sp-1)}
+.chk .item{display:flex;gap:var(--sp-2);align-items:flex-start;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);
+  font-size:var(--fs-sm);background:var(--surface-inset);color:var(--text-muted)}
+.chk .item.ok{background:var(--st-ok-bg);color:var(--st-ok-fg)}
+.chk .item.warn{background:var(--st-bake-bg);color:var(--st-bake-fg)}
+.chk .item.bad{background:var(--st-danger-bg);color:var(--st-danger-fg);font-weight:600}
+/* 배너 — 본문보다 먼저 읽혀야 하는 것만 여기 온다 */
+.note{display:flex;gap:var(--sp-3);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm);
+  line-height:var(--lh-body);border:1px solid var(--border-default);background:var(--surface-raised)}
+.note .ic{margin-top:2px}
+.note b{font-weight:700}
+.note.n-warn{background:var(--st-bake-bg);border-color:var(--st-bake-bd);color:var(--st-bake-fg)}
+.note.n-ok{background:var(--st-ok-bg);border-color:var(--st-ok-bd);color:var(--st-ok-fg)}
+.note.n-hold{background:var(--st-hold-bg);border-color:var(--st-hold-bd);color:var(--st-hold-fg)}
+.note.n-info{background:var(--accent-surface);border-color:var(--accent-border);color:var(--accent)}
+.note .q{color:var(--text-default);display:block}
+.note .grow{flex:1;min-width:0}
+.note .undo{margin-left:auto;display:flex;align-items:center;gap:var(--sp-3);font-size:var(--fs-xs);white-space:nowrap}
+.mat{border:1px solid var(--border-subtle);border-radius:var(--r-md);background:var(--surface-raised);overflow:hidden}
+.mat>summary{list-style:none;cursor:pointer;padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm);color:var(--text-muted);
+  display:flex;align-items:center;gap:var(--sp-2)}
+.mat>summary::-webkit-details-marker{display:none}
+.mat>summary:hover{background:var(--surface-hover)}
+.mat-in{padding:0 var(--sp-4) var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-2);
+  border-top:1px solid var(--border-subtle);padding-top:var(--sp-3)}
+.mat-row{display:flex;gap:var(--sp-3);font-size:var(--fs-sm)}
+.mat-row .k{flex:none;width:19px;height:19px;border-radius:50%;background:var(--hl-surface);color:var(--hl-num);
+  font-size:var(--fs-xs);font-weight:800;display:flex;align-items:center;justify-content:center}
+.mat-row .t{flex:1}
+.mat-row .w{flex:1;color:var(--text-muted)}
+.rjlog{display:flex;flex-direction:column;gap:var(--sp-2);font-size:var(--fs-sm);color:var(--text-muted)}
+.rjlog .r{border-left:2px solid var(--st-danger-bd);padding-left:var(--sp-3)}
+.rjlog details summary{cursor:pointer;font-size:var(--fs-xs);color:var(--text-faint)}
+.rjlog .hint{border-left-color:var(--st-danger-fg);color:var(--st-danger-fg);font-weight:600}
+/* 판정 바 — 화면 아래 고정. 172명을 훑는 동안 마우스가 이동하지 않게. */
+.pact{position:sticky;bottom:0;background:var(--surface-raised);border-top:1px solid var(--border-default);
+  box-shadow:var(--shadow-raise);padding:var(--sp-3) var(--sp-5);display:flex;gap:var(--sp-3);align-items:center;z-index:4}
+.pact .rj{flex:1;min-width:150px;font-size:var(--fs-sm)}
+.pact .no{border-color:var(--st-danger-bd);color:var(--st-danger-fg)}
+.pact .no:hover:not(:disabled){border-color:var(--st-danger-fg);background:var(--st-danger-bg);color:var(--st-danger-fg)}
+.pact .yes{background:var(--st-ok-fg);border-color:var(--st-ok-fg);color:var(--text-onaccent);font-weight:700}
+.pact .yes:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);color:var(--text-onaccent)}
+.pact button{display:inline-flex;align-items:center;gap:var(--sp-2);white-space:nowrap}
+
+@media (max-width:1180px){
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto}
+  .col.c-sum{grid-column:1 / -1;border-left:none;border-top:1px solid var(--border-subtle)}
+  .col.c-sum .cbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:start}
+  .col.c-sum .hr{display:none}   /* 가로로 펼쳐지면 칸 사이 구분선이 아니라 토막 선이 된다 */
+}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .rail{display:none}
+  .grid{grid-template-columns:1fr;grid-template-rows:none}
+  .col{overflow:visible;border-left:none;border-top:1px solid var(--border-subtle)}
+  .work{overflow:auto}
+}
+</style></head><body>
+
+<header class="topbar">
+  <span class="brand">세특 마킹</span>
+  <nav class="views" id="views">
+    <button data-v="mark" class="on" title="이 반 전체 — 원문을 칠하고 재료를 만드는 화면">마킹 <span class="cnt" id="v-mark"></span></button>
+    <button data-v="review" title="초안이 나온 학생만 — 문장을 읽고 확정/다시를 판정하는 화면">검수 <span class="cnt" id="v-review"></span></button>
+  </nav>
+  <div class="tally" id="total"></div>
+  <details class="help">
+    <summary><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 7.3v4M8 5.1v.3"/></svg>도움말</summary>
+    <div class="sheet">
+      <p><b>마킹</b> — 원문에서 의미 있는 부분을 드래그하면 바로 형광펜이 칠해집니다. 칠한 구간마다 <b>왜</b> 골랐는지,
+        관측 역량과 <b>도달 상/중/하</b>를 넣고 <b>초안 요청</b>을 켜면 그 학생만 세특이 구워집니다.</p>
+      <p><b>안 칠하고 요청하면 AI가 원문에서 직접 고릅니다(위임)</b> — 대신 검수를 더 보셔야 합니다.</p>
+      <p><b>검수</b> — 나온 초안을 <b>[확정]</b> 또는 <b>[다시]</b>로 판정합니다. 확정한 것만 NEIS로 넘어갑니다.</p>
+      <div class="keys">
+        <kbd>J</kbd><span>다음 학생</span><kbd>K</kbd><span>이전 학생</span>
+        <kbd>1</kbd><kbd>2</kbd><span>· <kbd>3</kbd> 도달 상·중·하</span>
+        <kbd>A</kbd><span>확정 (검수)</span><kbd>R</kbd><span>다시 (검수)</span><kbd>H</kbd><span>보류 (검수)</span>
+        <kbd>Tab</kbd><span>다음 입력칸</span>
+      </div>
+    </div>
+  </details>
+</header>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-head"><select id="cls" aria-label="반 선택"></select></div>
+    <div class="rail-list" id="rail"></div>
+    <div class="rail-foot">
+      <div class="prog"><span id="progtxt">—</span></div>
+      <div class="bar"><i id="progbar" style="width:0%"></i></div>
+      <details class="ctxbox" id="ctxbox">
+        <summary><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 2.4h6l3.2 3.2v8H3.4z"/><path d="M5.8 8.2h4.4M5.8 10.6h3"/></svg>활동 맥락 (반 공통)</summary>
+        <textarea id="ctx" placeholder="예: OO의 내용을 토대로 △△를 창작하는 활동 — 반 전체 세특의 첫머리가 됩니다"></textarea>
+      </details>
+    </div>
+  </aside>
+  <main class="work" id="work"></main>
+</div>
+<datalist id="caps"></datalist>
+
+<script>
+/* 세특 마킹 화면.
+
+   **화면 둘을 나눈다 — 마킹과 검수.** 한 화면에 모든 요구를 담으면 품질이 떨어진다(Prodigy).
+   마킹은 "무엇이 재료인가"를 정하는 일이고, 검수는 "나온 문장이 그 재료에서 왔는가"를 보는 일이다.
+   둘은 리듬이 다르다 — 172명을 쭉 칠하고, 나중에 나온 초안을 쭉 읽는다.
+
+   **체크박스 = 요청, 버튼 = 판정.** 이 둘의 성격을 섞지 않는다 —
+   '초안 요청'은 세특이 나오기 *전*의 행동(되돌릴 수 있는 상태)이고,
+   [확정]/[다시]는 나온 *후*의 판정(사건)이다. 그래서 요청은 지금도 체크박스다.
+
+   확정(approved)은 NEIS 이관 게이트다. 생기부는 법적 문서이고 최종 책임이 교사에게 있으므로
+   "안 읽음"과 "읽고 괜찮음"이 반드시 구분돼야 한다 — 그래서 승인을 없애지 않는다.
+
+   이 화면은 렌더하지 않는다. 요청 = 마킹 파일을 최신으로 만드는 것이고,
+   감시자(watch_done.sh) + 구독제 에이전트가 out/drafts_v3b/ 에 쓰면 폴링으로 집어온다. */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>Array.from(r.querySelectorAll ? r.querySelectorAll(s) : []);
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const squash = s => String(s??'').replace(/\s+/g,'');
+const byteLen = s => { try{ return new TextEncoder().encode(String(s??'')).length; }catch{ return String(s??'').length; } };
+
+let STATE = {};                 // 학번 -> 마킹 레코드(디스크와 같은 모양)
+let STUDENTS = [], CLASSES = [], SECTIONS = [], CUR = null;
+let CURH = null;                // 지금 작업영역에 떠 있는 학생
+let VIEW = 'mark';              // 'mark' | 'review' — 두 화면은 독립이다
+let CONFIG = {limits:null, watch_cmd:'bash tool/watch_done.sh'};
+let DIDX = {};                  // 학번 -> 초안 파일 mtime(ms). 배지용 경량 색인
+const PEND = new Set();         // 지금 대기열(= 다시 그려질 학생). 판정은 서버의 pending.py 가 한다
+const DRAFT = {};               // 학번 -> /draft 응답 캐시
+const SIG = {};                 // 학번 -> 재료 지문(확정 자동 해제 판정용)
+const capsSet = new Set();
+const POLL_MS = 2500;
+
+/* 아이콘 — 이모지를 쓰지 않는다.
+   이모지는 OS·폰트마다 모양과 폭이 달라 줄이 흔들리고, 색을 상태 토큰에 맞출 수 없으며,
+   스크린리더가 "흰색 흑색 체크 표시"처럼 읽는다. 전부 stroke SVG 로 그린다. */
+const ICONS = {
+  check:'<path d="M3.4 8.6l3.1 3.1 6.1-7"/>',
+  pause:'<path d="M6 3.6v8.8M10 3.6v8.8"/>',
+  alert:'<path d="M8 2.5l6.1 10.7H1.9z"/><path d="M8 6.6v3M8 11.2v.3"/>',
+  info:'<circle cx="8" cy="8" r="6.2"/><path d="M8 7.3v4M8 5.1v.3"/>',
+  x:'<path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4"/>',
+  note:'<path d="M3.4 2.4h6l3.2 3.2v8H3.4z"/><path d="M5.8 8.2h4.4M5.8 10.6h3"/>',
+  arrow:'<path d="M2.8 8h9.7M9 4.6L12.5 8 9 11.4"/>',
+  pen:'<path d="M11.2 2.6l2.2 2.2-7.5 7.5-2.9.7.7-2.9z"/>',
+  clock:'<circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.4 1.6"/>',
+  doc:'<path d="M3.6 2.4h5.6l3.2 3.2v8H3.6z"/><path d="M6 8.4h4.2M6 10.8h2.8"/>',
+  layers:'<path d="M8 2.4l5.6 3-5.6 3-5.6-3z"/><path d="M2.4 8.6l5.6 3 5.6-3"/>',
+  undo:'<path d="M3.4 6.6h6.2a3.4 3.4 0 110 6.8H6"/><path d="M5.8 4.2L3.4 6.6l2.4 2.4"/>',
+};
+const ic = (n,cls='') => `<svg class="ic ${cls}" viewBox="0 0 16 16" aria-hidden="true">${ICONS[n]||''}</svg>`;
+
+// 과제 형태가 바뀌면 students.json 의 sections 가 바뀐다. 화면은 그걸 읽어 칸을 그린다(하드코딩 금지).
+const FALLBACK_SECTIONS = [
+  {key:'p3', label:'p3 · 장면 설정 + 나의 생각', tag:'장면·생각', tip:'드래그하면 바로 형광펜'},
+  {key:'p4', label:'p4 · 인물 간 대화', tag:'대화'},
+];
+const secTag = k => (SECTIONS.find(x=>x.key===k)||{}).tag || k;
+
+/* 매핑 상태(명렬표 3중 대조 결과) — 마킹 상태와 다른 축이다. 헤더에 작은 칩으로만 둔다.
+   students.json 의 status 는 '✅일치' '⚠️오독복원' '❌미제출' 처럼 머리글자로 등급을 싣는다.
+   그 머리글자로 색을 고르고 **글자는 한글만** 남긴다 — 화면에 이모지를 그대로 흘리지 않는다. */
+function stDot(status){
+  const s=String(status||'');
+  const label=s.replace(/[^가-힣]/g,'')||'—';
+  if(s.startsWith('✅')) return ['var(--st-ok-fg)', label];
+  if(s.startsWith('⚠')) return ['var(--st-bake-fg)', label];
+  if(s.startsWith('❌')) return ['var(--st-danger-fg)', label];
+  if(s.startsWith('❓')) return ['var(--text-faint)', label];
+  return ['var(--text-faint)', label];
+}
+
+/* 겹치지 않는 하이라이트 범위로 소스 HTML 생성 (best-effort 매칭).
+   data-hl = 전역 인덱스(되짚기용), data-n = 화면에 보이는 번호.
+   번호를 찍는 이유: 원문과 주석이 나란히 있어도 "이 형광펜이 저 주석"임을 hover 없이 알 수 있어야 한다. */
+function renderSrc(text, marked){
+  const ranges=[];
+  for(const {h,i} of marked){
+    let from=0, idx;
+    while((idx=text.indexOf(h.text, from))!==-1){
+      if(!ranges.some(r=>idx<r.e && idx+h.text.length>r.s)){ ranges.push({s:idx,e:idx+h.text.length,i}); break; }
+      from=idx+1;
+    }
+  }
+  ranges.sort((a,b)=>a.s-b.s);
+  let out='', pos=0;
+  for(const r of ranges){
+    out+=esc(text.slice(pos,r.s))+`<mark data-hl="${r.i}" data-n="${r.i+1}">`+esc(text.slice(r.s,r.e))+'</mark>';
+    pos=r.e;
+  }
+  return out+esc(text.slice(pos));
+}
+
+function refreshCaps(){
+  const el=$('#caps'); if(el) el.innerHTML=[...capsSet].map(c=>`<option value="${esc(c)}">`).join('');
+}
+
+const debounce=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)};};
+const debounced={};
+// 입력한 만큼 칸이 자란다 — 스크롤바가 생기면 쓴 내용을 다시 못 읽는다.
+const autogrow=el=>{ if(!el||!el.style) return; el.style.height='auto'; el.style.height=((el.scrollHeight||0)+2)+'px'; };
+
+/* 재료 = 하이라이트·왜·역량·레벨·기타 요구사항. 이게 바뀌면 두 가지가 따라온다.
+     ① 확정 해제 — 확정해 놓고 마킹만 바뀐 유령 상태를 막는다.
+     ② material_at 갱신 — 감시자가 "다시 그려야 하나"를 판정하는 기준(pending.py).
+   파일 mtime 을 기준으로 삼지 않는 이유: 확정·반려 기록·git checkout 처럼 재료와 무관한
+   쓰기에도 mtime 은 갱신돼서, 그걸 '마킹이 바뀌었다'로 읽으면 확정본이 조용히 덮어써진다.
+   저장 경로가 한 곳이라 판정도 여기 한 곳에서만 한다. */
+const materialSig = s => JSON.stringify([
+  (s.highlights||[]).map(h=>[h.section,h.text,h.why||'']), s.competency||'', s.level||'', s.extra||''
+]);
+function releaseIfEdited(hakbun){
+  const s=STATE[hakbun], sig=materialSig(s);
+  if(SIG[hakbun]!==undefined && sig!==SIG[hakbun]){
+    s.material_at=new Date().toISOString();
+    PEND.add(hakbun);                                     // 다시 그릴 대상 — 배지에 즉시 반영
+    if(s.approved){ s.approved=false; s.approved_at=null; }
+    // 재료가 바뀌면 아까 보류한 그 초안은 이미 옛것이다 — 보류 상태를 끌고 가면 안 된다.
+    if(s.held){ s.held=false; s.held_at=null; }
+    paintStatus(hakbun);
+    if(VIEW==='review' && CURH===hakbun) paintReview(hakbun);
+    updateCounts();
+  }
+  SIG[hakbun]=sig;
+}
+
+async function save(hakbun, immediate=false){
+  const s=STATE[hakbun];
+  releaseIfEdited(hakbun);
+  s.updated=new Date().toISOString();
+  const doIt=async()=>{
+    const bar=$(`#save-${hakbun}`);
+    try{
+      const r=await fetch('/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
+      if(!r.ok) throw new Error('save failed');
+      if(bar){ bar.innerHTML=ic('check')+'저장됨 '+esc(new Date().toLocaleTimeString('ko-KR')); bar.classList.add('ok'); }
+    }catch(e){ if(bar){ bar.innerHTML=ic('alert')+'저장 실패 — 서버가 떠 있는지 확인하세요'; bar.classList.remove('ok'); } }
+  };
+  immediate ? doIt() : debounced[hakbun](doIt);
+}
+
+function addHighlightFromSelection(hakbun, section){
+  const sel=window.getSelection(); if(!sel||sel.isCollapsed) return;      // 단순 클릭은 무시
+  const box=$(`#src-${hakbun}-${section}`);
+  if(!box||!box.contains(sel.anchorNode)||!box.contains(sel.focusNode)){ return; }
+  const t=sel.toString().trim();
+  if(t.length<2){ sel.removeAllRanges(); return; }
+  if(STATE[hakbun].highlights.some(h=>h.section===section && h.text===t)){ sel.removeAllRanges(); return; }
+  STATE[hakbun].highlights.push({section, text:t, why:''});
+  sel.removeAllRanges();
+  renderCard(hakbun); save(hakbun,true);
+  const inps=$$(`#hls-${hakbun} .ann-why`);
+  if(inps.length) inps[inps.length-1].focus();          // 칠하자마자 '왜'로 커서가 간다
+}
+
+// 도달 수준 = 교사가 찍는 값. 레이블만 저장하고 뜻(루브릭 진술문)은 넘기지 않는다
+// — 진술문을 주면 그 어휘에 맞춰 문장이 뒤틀린다(교사 관찰). 레벨은 '도달 문장 허가 범위'로만 쓰인다.
+function paintLevel(hakbun){
+  const cur=STATE[hakbun].level||'';
+  $$(`#lv-${hakbun} button`).forEach(b=>b.classList.toggle('on', b.dataset.v===cur));
+  const w=$(`#lvwarn-${hakbun}`);
+  if(w) w.innerHTML = (STATE[hakbun].done && !cur) ? ic('alert')+'<span>미지정 — AI가 추정합니다</span>' : '';
+}
+
+// 요청 체크박스의 표시 상태. 체크박스 자체는 유지하되(요청≠판정) 눈에는 버튼처럼 보이게 한다.
+function paintReq(hakbun){
+  const box=$(`#done-${hakbun}`);
+  if(box) box.checked=!!STATE[hakbun].done;
+  const w=$(`#reqw-${hakbun}`);
+  if(w) w.classList.toggle('on', !!STATE[hakbun].done);
+}
+
+/* ── 진행 상태 ─────────────────────────────────────────────────────────────
+   마킹중 → (초안 요청) 굽는 중 → 초안 나옴 → 확정.
+   '굽는 중'은 요청했는데 아직 안 나온 구간이다. 이걸 '마킹중'에 합치면
+   172명 훑을 때 "요청했는데 감시자가 안 떠 있음"을 못 알아챈다. */
+// 위임 = 하이라이트 0개. 개수로만 가른다 — '부실해 보이면' 류의 판단을 넣지 않는다(하드바인딩이 샌다).
+const isDelegated = hakbun => (STATE[hakbun].highlights || []).length === 0;
+
+/* ledger 한 줄이 어디서 왔는지. **원문 근거가 없는 서술을 시각적으로 갈라내는 지점**이라
+   순수 함수로 빼서 회귀로 잠근다(계약서 §0-3). 순서가 규칙이다:
+   기타 요구사항이 위임보다 먼저다 — 위임 학생도 교사가 준 사실은 원문에서 온 게 아니다. */
+const isExtraSpan = span => /^\s*기타\s*요구사항/.test(String(span||''));
+function ledgerOrigin(span, dele, hi){
+  span=String(span??'');
+  if(isExtraSpan(span))
+    return {tag:'교사 요구사항(원문 근거 없음)', body:span.replace(/^\s*기타\s*요구사항\s*[—\-·:]*\s*/,'')};
+  if(dele) return {tag:'원문(AI 선택)', body:span};
+  if(/교사\s*지정/.test(span) || (hi<0 && !/하이라이트/.test(span)))
+    return {tag:'교사 지정', body:span.replace(/^\s*교사\s*지정\s*[—\-·:]*\s*/,'')};
+  return {tag:'하이라이트', body:span};
+}
+
+function statusOf(hakbun){
+  const s=STATE[hakbun];
+  const d = isDelegated(hakbun) ? ' · 위임' : '';
+  // 배지 문자열에 이모지를 넣지 않는다 — 상태색은 토큰(.b-ok/.b-hold)이 칠한다.
+  if(s.approved) return {k:'ok', t:'확정'+d};
+  if(!s.done) return {k:'', t:'마킹중'};
+  // 보류 = "못 정하겠다, 나중에 다시". 없으면 '초안 나옴'에 섞여 **안 읽은 것과 구분이 안 된다**
+  // — 승인을 없앴을 때 생기는 구멍과 정확히 같은 종류다. 재렌더는 하지 않는다(pending.py).
+  if(s.held) return {k:'hold', t:'보류'+d};
+  // 대기열에 있으면 지금 보이는 초안은 다시 그려질 것 — '초안 나옴'이라고 하면 안 된다.
+  return (DIDX[hakbun] && !PEND.has(hakbun))
+    ? {k:'draft', t:'초안 나옴'+d} : {k:'bake', t:'굽는 중'+d};
+}
+
+/* 상태를 화면 두 곳에 동시에 칠한다: 작업영역 배지 + 레일 점.
+   지금 안 떠 있는 학생이면 해당 노드가 없다 — 조용히 건너뛴다(폴링이 매번 전원을 훑는다). */
+function paintStatus(hakbun){
+  const st=statusOf(hakbun);
+  const b=$(`#bd-${hakbun}`);
+  if(b){ b.textContent=st.t; b.className='badge '+(st.k?'b-'+st.k:''); }
+  const d=$(`#rd-${hakbun}`);
+  if(d){ d.className='dot'+(st.k?' dot--'+st.k:''); d.title=st.t; }
+}
+
+/* ── 마킹 화면 ───────────────────────────────────────────────────────────── */
+const flash=(hakbun,hi,on)=>
+  $$(`#src-wrap-${hakbun} mark[data-hl="${hi}"]`).forEach(m=>m.classList.toggle('flash',on));
+
+function renderCard(hakbun){
+  const s=STATE[hakbun]; if(!s) return;
+  paintLevel(hakbun); paintStatus(hakbun); paintReq(hakbun);
+  const marked=s.highlights.map((h,i)=>({h,i}));
+  for(const sec of SECTIONS){
+    const box=$(`#src-${hakbun}-${sec.key}`);
+    if(box) box.innerHTML=renderSrc(s[sec.key]||'', marked.filter(x=>x.h.section===sec.key));
+  }
+  const hls=$(`#hls-${hakbun}`);
+  if(!hls) return;
+  hls.innerHTML = s.highlights.length ? ''
+    : `<div class="empty">${ic('alert')} 표시한 핵심이 없습니다 — 이대로 요청하면 <b>AI가 원문에서 직접 고릅니다(위임)</b>.
+       원문을 드래그하면 그 부분만 재료가 됩니다.</div>`;
+  s.highlights.forEach((h,i)=>{
+    const row=document.createElement('div'); row.className='ann'; row.dataset.hi=String(i);
+    row.innerHTML=`<span class="ann-n" title="원문에서 이 자리로">${i+1}</span>
+      <div class="ann-b">
+        <div class="ann-tag">${esc(secTag(h.section))}</div>
+        <div class="ann-txt">${esc(h.text)}</div>
+        <textarea class="ann-why" rows="1" placeholder="왜 이 부분이 의미 있나요? (핵심)">${esc(h.why||'')}</textarea>
+      </div>
+      <button class="ann-rm" title="이 마킹 지우기" aria-label="이 마킹 지우기">${ic('x')}</button>`;
+    const why=row.querySelector('.ann-why');
+    why.addEventListener('input',e=>{h.why=e.target.value;autogrow(e.target);save(hakbun);});
+    row.querySelector('.ann-rm').addEventListener('click',()=>{s.highlights.splice(i,1);renderCard(hakbun);save(hakbun,true);});
+    // 원문↔주석은 같은 화면에 있다 — 여기서의 되짚기는 실제로 쓸모가 있다(검수 화면의 되짚기와 다르다).
+    row.addEventListener('mouseenter',()=>flash(hakbun,i,true));
+    row.addEventListener('mouseleave',()=>flash(hakbun,i,false));
+    row.querySelector('.ann-n').addEventListener('click',()=>{
+      const m=$(`#src-wrap-${hakbun} mark[data-hl="${i}"]`);
+      if(m) m.scrollIntoView({block:'center',behavior:'smooth'});
+    });
+    hls.appendChild(row);
+    autogrow(why);                                   // 붙인 뒤에 재야 scrollHeight 가 나온다
+  });
+  const cnt=$(`#anncnt-${hakbun}`);
+  if(cnt){
+    const blank=s.highlights.filter(h=>!(h.why||'').trim()).length;
+    cnt.textContent = s.highlights.length
+      ? `${s.highlights.length}건${blank?` · '왜' 비어 있음 ${blank}`:''}` : '없음 (위임)';
+  }
+}
+
+function buildCard(s){
+  const hakbun=s.hakbun, st=STATE[hakbun];
+  const secs=SECTIONS.map(sec=>`
+    <div class="sec">
+      <div class="lbl">${esc(sec.label)}${sec.tip?`<span class="tip">${esc(sec.tip)}</span>`:''}</div>
+      <div class="src" id="src-${hakbun}-${sec.key}"></div>
+    </div>`).join('');
+  const grid=document.createElement('div'); grid.className='grid';
+  grid.innerHTML=`
+    <section class="col c-src" id="src-wrap-${hakbun}">
+      <div class="chead">${ic('doc')} 원문</div>
+      <div class="cbody">${secs}</div>
+    </section>
+    <section class="col c-ann">
+      <div class="chead">${ic('pen')} 주석 <span class="n mut" id="anncnt-${hakbun}"></span></div>
+      <div class="cbody" id="hls-${hakbun}"></div>
+    </section>
+    <section class="col c-sum">
+      <div class="chead">${ic('layers')} 총평</div>
+      <div class="cbody">
+        <div class="fld">
+          <label for="cap-${hakbun}">관측되는 역량 <span class="sub">— 무엇에 도달했나</span></label>
+          <input id="cap-${hakbun}" list="caps" placeholder="예: 역사적 사건을 개인의 시선으로 재구성하는 역량"
+                 title="${esc(st.competency||'')}" value="${esc(st.competency||'')}">
+        </div>
+        <div class="fld">
+          <label>도달 <span class="sub">— 마지막 '이를 통해 …' 문장을 어디까지 쓸지</span></label>
+          <div class="seg" id="lv-${hakbun}">
+            <button data-v="상">상</button><button data-v="중">중</button><button data-v="하">하</button><button data-v="">미지정</button>
+          </div>
+          <div class="warn-line" id="lvwarn-${hakbun}"></div>
+        </div>
+        <div class="fld">
+          <label for="ex-${hakbun}">기타 요구사항 <span class="sub">— 분량·톤·관찰 사실 (선택)</span></label>
+          <textarea id="ex-${hakbun}" rows="3"
+            placeholder="예: 쓸 게 없으니 참여했다 정도로 짧게">${esc(st.extra||'')}</textarea>
+          <div class="savebar mut">${ic('info')}<span>여기서 준 사실은 근거 대조에 <b>원문 근거 없음</b>으로 따로 표시됩니다</span></div>
+        </div>
+        <div class="hr"></div>
+        <label class="req" id="reqw-${hakbun}">
+          <input type="checkbox" id="done-${hakbun}">
+          <span>초안 요청</span>
+          <span class="sub">이 학생만 구움</span>
+        </label>
+        <div class="savebar" id="save-${hakbun}"></div>
+        <div id="rjnote-${hakbun}"></div>
+      </div>
+    </section>`;
+  $('#work').appendChild(grid);
+
+  for(const sec of SECTIONS){
+    const box=$(`#src-${hakbun}-${sec.key}`);
+    if(box) box.addEventListener('mouseup', ()=>setTimeout(()=>addHighlightFromSelection(hakbun,sec.key),0));
+  }
+  // 기타 요구사항도 재료다(materialSig 포함) — 고치면 확정이 풀리고 대기열에 다시 걸린다.
+  $(`#ex-${hakbun}`).addEventListener('input',e=>{ STATE[hakbun].extra=e.target.value; save(hakbun); });
+  $(`#cap-${hakbun}`).addEventListener('input',e=>{
+    STATE[hakbun].competency=e.target.value;
+    e.target.title=e.target.value;                  // 칸보다 길면 손을 올려 전문을 본다(자동완성 때문에 input 유지)
+    if(e.target.value){capsSet.add(e.target.value);refreshCaps();}
+    save(hakbun);
+  });
+  $(`#lv-${hakbun}`).addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    STATE[hakbun].level=b.dataset.v; paintLevel(hakbun); save(hakbun,true);
+  });
+  $(`#done-${hakbun}`).addEventListener('change',e=>{
+    STATE[hakbun].done=e.target.checked;
+    save(hakbun,true); paintReq(hakbun); paintStatus(hakbun); updateCounts();
+  });
+  const rj=(STATE[hakbun].rejects||[]).length;
+  const note=$(`#rjnote-${hakbun}`);
+  if(note && rj) note.innerHTML=`<div class="note n-warn">${ic('undo')}<span class="grow">
+    <b>반려 이력 ${rj}회</b> — 사유가 다음 렌더에 그대로 전달됩니다. 검수 화면에서 볼 수 있습니다.</span></div>`;
+  renderCard(hakbun);
+}
+
+/* ── 검수 화면 ─────────────────────────────────────────────────────────────
+   본문 · 바이트 · 근거 대조 · 표면 검증 · [확정]/[다시].
+   여기가 사람 Tier-2 검수 자리다. 원문은 싣지 않는다 — 마킹 화면의 일이고,
+   초안에서 원문으로 되짚는 hover 는 실제로 쓰이지 않았다(교사 관찰). 대신 '마킹 재료'를 접어 둔다.
+   바이트·금지어·종결·레벨 판정은 서버(validate_draft.py) 결과를 그대로 그린다 —
+   브라우저에서 다시 계산하지 않는다. 검증기는 단일 출처여야 한다. */
+function rejectLog(s){
+  const rs=s.rejects||[];
+  if(!rs.length) return '';
+  // 물린 본문 스냅샷을 함께 보여준다 — 다음 렌더가 파일을 덮어써도 "내가 뭘 보고 물렸나"가 남는다.
+  const rows=rs.map((r,i)=>`<div class="r">${i+1}. ${esc(r.reason||'(사유 없음 — 직전 초안 자체를 물린 것으로 전달)')}
+      <span class="mut">· ${esc((r.at||'').slice(0,16).replace('T',' '))}</span>
+      ${r.setuk?`<details><summary>물린 본문 보기 (${byteLen(r.setuk)}B)</summary>
+        <div class="setuk" style="margin-top:6px">${esc(r.setuk)}</div></details>`:''}</div>`).join('');
+  // 3회면 문장이 아니라 재료 문제일 가능성이 높다.
+  const hint=rs.length>=3
+    ? `<div class="r hint">3회 이상 물렸습니다 — 문장이 아니라 재료(얇은 하이라이트·빈 '왜') 문제일 수 있습니다. 마킹을 손보세요.</div>`
+    : '';
+  return `<div class="plabel">반려 이력 <span class="sub">${rs.length}회 · 다음 렌더에 그대로 전달</span></div>
+          <div class="rjlog">${rows}${hint}</div>`;
+}
+
+// 근거(ledger)의 span 이 어느 하이라이트에서 왔는지 되짚는다. 최선노력 — 못 찾으면 '교사 지정'으로 본다.
+function linkIndex(s, span){
+  const probe=squash(span);
+  if(probe.length<4) return -1;
+  return s.highlights.findIndex(h=>{
+    const t=squash(h.text);
+    return t.length>=4 && (probe.includes(t.slice(0,12)) || t.includes(probe.slice(0,12)));
+  });
+}
+
+function materialBox(s){
+  const hs=s.highlights||[];
+  const rows=hs.map((h,i)=>`<div class="mat-row"><span class="k">${i+1}</span>
+      <div class="t">${esc(h.text)}</div>
+      <div class="w">${h.why?esc(h.why):'<span class="mut">— \'왜\' 비어 있음</span>'}</div></div>`).join('');
+  const meta=[
+    s.competency?`역량: ${esc(s.competency)}`:'',
+    s.level?`도달: ${esc(s.level)}`:'도달: 미지정',
+    s.extra?`기타 요구사항: ${esc(s.extra)}`:'',
+  ].filter(Boolean).join(' · ');
+  return `<details class="mat"><summary>${ic('layers')} 마킹 재료 보기 — 하이라이트 ${hs.length}건</summary>
+    <div class="mat-in">${rows||'<div class="mut">칠한 구간이 없습니다(위임).</div>'}
+      <div class="mut" style="font-size:var(--fs-sm)">${meta}</div></div></details>`;
+}
+
+function paintReview(hakbun){
+  const host=$('#rv-in'); if(!host) return;
+  const s=STATE[hakbun], data=DRAFT[hakbun];
+
+  if(!data){                                   // 아직 초안이 없다 — 감시자 + 에이전트를 기다리는 중
+    const dele=isDelegated(hakbun);
+    host.innerHTML=`
+      <div class="note n-warn">${ic('clock')}<span class="grow">
+        ${s.done ? (dele ? '<b>초안을 굽는 중</b> — 형광펜이 없어 AI가 원문에서 직접 고릅니다(위임)'
+                         : '<b>초안을 굽는 중</b> — 감시자가 집어가면 여기에 나타납니다')
+                 : '<b>아직 요청하지 않았습니다</b> — 마킹 화면에서 [초안 요청]을 켜면 이 학생만 구워집니다.'}
+        <span class="q">감시자가 안 떠 있으면 다른 터미널에서 <code>${esc(CONFIG.watch_cmd)}</code></span></span>
+        <button id="chk-${hakbun}">지금 확인</button></div>
+      ${materialBox(s)}
+      ${rejectLog(s)}`;
+    const b=$(`#chk-${hakbun}`); if(b) b.onclick=()=>fetchDraft(hakbun);
+    return;
+  }
+
+  const d=data.draft, v=data.validation;
+  const lim=data.limits?.byte_max ?? CONFIG.limits?.byte_max ?? null;
+  const bytes=v ? v.bytes : null;
+  const over=!!(bytes!=null && lim && bytes>lim);
+  const pct=(bytes!=null && lim) ? Math.min(100, bytes/lim*100) : 0;
+
+  // 위임 학생은 span 출처가 '내가 칠한 자리'가 아니라 원문이다 — 되짚기가 안 되므로 그렇게 표시한다.
+  const dele=isDelegated(hakbun);
+  const led=(d.ledger||[]).map(L=>{
+    const span=String(L.span??'');
+    const hi=(dele||isExtraSpan(span)) ? -1 : linkIndex(s, span);
+    const {tag, body}=ledgerOrigin(span, dele, hi);
+    return `<div class="row${isExtraSpan(span)?' noev':''}">
+      <div class="claim">${esc(L.claim)}</div>
+      <div class="span"><b>${esc(tag)}</b>${body?esc(body):''}</div>
+    </div>`;
+  }).join('') || '<div class="row"><div class="claim mut">근거 기록이 없습니다.</div></div>';
+
+  const items=[];
+  if(!v) items.push(['warn','검증기를 실행할 수 없습니다 — python3 설치 여부를 확인하세요.']);
+  else{
+    v.issues.forEach(x=>items.push(['bad',x]));
+    v.warns.forEach(x=>items.push(['warn',x]));
+    if(v.repeats?.length) items.push(['warn',`반복어 ${v.repeats.join(', ')}`]);
+    if(!items.length) items.push(['ok','표면 검증 통과 — 바이트·종결·금지어 이상 없음']);
+  }
+  const iconOf=c=>c==='ok'?'check':'alert';
+
+  const okbar=s.approved
+    ? `<div class="note n-ok">${ic('check')}<span class="grow"><b>확정됨</b> — NEIS 이관 대상</span>
+         <span class="undo">${esc((s.approved_at||'').slice(0,16).replace('T',' '))}
+           <button id="undo-${hakbun}">확정 취소</button>
+           <button class="goto" id="next-${hakbun}">다음 검수 대상 ${ic('arrow')}</button></span></div>` : '';
+  const holdBar=s.held && !s.approved
+    ? `<div class="note n-hold">${ic('pause')}<span class="grow"><b>보류 중</b> — 판정을 미뤄 뒀습니다.
+        다시 그리지 않으니 언제든 돌아와서 [확정]이나 [다시]로 마무리하세요.</span></div>` : '';
+  // 마킹을 고친 뒤라 지금 초안이 그 마킹의 결과가 아니면 확정을 막는다(읽은 것과 확정한 것이 달라진다).
+  const stale=data.stale && !s.approved
+    ? `<div class="note n-warn">${ic('clock')}<span class="grow">이 초안은 <b>지금 마킹의 결과가 아닙니다</b>
+        — 마킹을 고친 뒤라 다시 그려지는 중입니다.</span></div>` : '';
+  // 위임은 AI가 의미까지 고른 것 = 검수 비용이 올라가는 구간. 확정 전에 더 보라고 알린다.
+  const deleBar=dele
+    ? `<div class="note n-warn">${ic('alert')}<span class="grow">형광펜이 없어 <b>AI가 원문에서 직접 골랐습니다(위임)</b>
+        — 근거가 원문 어디서 왔는지 아래에서 확인하세요. 반복해서 물리게 되면 다시 굽지 말고
+        <b>직접 칠하는 편이 빠릅니다.</b></span></div>` : '';
+  /* 기타 요구사항을 못 지켰으면 그 사유를 교사에게 **직접** 보여준다(교사 요청 2026-07-31).
+     묻히면 안 되는 정보다 — 교사가 요청한 걸 물렸다는 뜻이라, 본문보다 먼저 읽혀야 한다. */
+  const unmetBar=(d.unmet||'').trim()
+    ? `<div class="note n-warn">${ic('note')}<span class="grow">
+        <b>요청하신 사항을 그대로 반영하지 못했습니다</b>
+        <span class="q">요청: “${esc(s.extra||'')}”</span>
+        <span class="q">${esc(d.unmet.trim())}</span></span></div>` : '';
+
+  host.innerHTML=okbar+holdBar+stale+deleBar+unmetBar+`
+    <div>
+      <div class="plabel">세특 본문</div>
+      <div class="setuk" style="margin-top:var(--sp-2)">${esc(d.setuk)}</div>
+      <div class="bytes${over?' over':''}" style="margin-top:var(--sp-3)">
+        <span class="n">${bytes??'—'}${lim?` / ${lim}`:''} B</span>
+        <span class="gauge"><i style="width:${pct}%"></i></span>${over?'<span>초과</span>':''}
+      </div>
+    </div>
+    <div>
+      <div class="plabel">근거 대조 <span class="sub">이 문장이 어디서 나왔나</span></div>
+      <div class="led" style="margin-top:var(--sp-2)">${led}</div>
+    </div>
+    <div>
+      <div class="plabel">표면 검증</div>
+      <div class="chk" style="margin-top:var(--sp-2)">
+        ${items.map(([c,t])=>`<div class="item ${c}">${ic(iconOf(c))}<span>${esc(t)}</span></div>`).join('')}
+      </div>
+    </div>
+    ${materialBox(s)}
+    ${rejectLog(s)}`;
+
+  const act=$('#rv-act');
+  if(act){
+    // 확정된 학생은 판정할 게 없다 — 빈 막대를 남기지 않는다(확정 취소는 위 배너에 있다).
+    if(act.style) act.style.display = s.approved ? 'none' : 'flex';
+    act.innerHTML = s.approved ? '' : panelActions(hakbun, !data.stale);
+    if(!s.approved){
+      const yes=$(`#yes-${hakbun}`); if(yes) yes.onclick=()=>setApproved(hakbun,true);
+      const no=$(`#no-${hakbun}`);  if(no)  no.onclick=()=>reject(hakbun, ($(`#rj-${hakbun}`)||{}).value?.trim()||'');
+      const hd=$(`#hold-${hakbun}`);if(hd)  hd.onclick=()=>setHeld(hakbun, !s.held);
+    }
+  }
+  if(s.approved){
+    const u=$(`#undo-${hakbun}`); if(u) u.onclick=()=>setApproved(hakbun,false);
+    const n=$(`#next-${hakbun}`); if(n) n.onclick=()=>step(1);
+  }
+}
+
+function panelActions(hakbun, canApprove){
+  const held=STATE[hakbun].held;
+  return `<input class="rj" id="rj-${hakbun}" placeholder="반려 사유(선택) — 다음 렌더에 그대로 전달됩니다">
+    <button id="hold-${hakbun}" title="못 정하겠을 때. 재렌더하지 않고 '나중에 볼 것'으로 표시만 합니다.">
+      ${ic('pause')}${held?'보류 해제':'보류'}</button>
+    <button class="no" id="no-${hakbun}">${ic('undo')}다시</button>
+    <button class="yes" id="yes-${hakbun}"${canApprove?'':' disabled title="마킹이 바뀌었습니다 — 새 초안을 기다리세요"'}>
+      ${ic('check')}확정</button>`;
+}
+
+/* [보류] — 판정을 미룬다. AI 와 무관한 순수 worklist 마커다.
+   재렌더하지 않고(pending.py 가 건너뛴다) 배지로만 구분한다 — 그래야 '초안 나옴'(안 읽음)과
+   '읽었는데 못 정함'이 갈린다. 재료를 건드리지 않으므로 material_at 도 안 찍는다. */
+function setHeld(hakbun, on){
+  const s=STATE[hakbun];
+  s.held=on;
+  s.held_at=on ? new Date().toISOString() : null;
+  if(on) PEND.delete(hakbun);
+  save(hakbun,true);
+  paintStatus(hakbun); paintReview(hakbun); updateCounts();
+}
+
+/* [확정] — NEIS 이관 게이트. 대기열(pending.py)이 이걸 보고 건너뛴다. */
+function setApproved(hakbun, on){
+  const s=STATE[hakbun];
+  s.approved=on;
+  s.approved_at=on ? new Date().toISOString() : null;
+  if(on){ s.held=false; s.held_at=null; }        // 확정했으면 보류가 아니다
+  SIG[hakbun]=materialSig(s);            // 확정 자체는 재료 변경이 아니다 — 지문·material_at 을 건드리지 않는다
+  if(on) PEND.delete(hakbun);
+  save(hakbun,true);
+  paintStatus(hakbun); paintReview(hakbun); updateCounts();
+}
+
+/* [다시] — 사유를 누적하고(지우지 않는다) 마킹 파일을 최신으로 만든다.
+   그러면 마킹이 초안보다 최신이 되어 대기열에 다시 걸리고, 사유는 다음 렌더 프롬프트로 들어간다.
+   반려 딱지를 지울 필요는 없다 — 다시 그려지면 초안이 더 최신이라 자연히 대기열에서 빠진다. */
+function reject(hakbun, reason){
+  const s=STATE[hakbun];
+  /* 물린 본문을 여기서 붙잡지 않으면 다음 렌더가 파일을 덮어쓰는 순간 사라진다.
+     사유만 남기면 2회 이상 물렸을 때 "내가 뭘 보고 물렸는지"를 되찾을 수 없다. */
+  const snapshot=(DRAFT[hakbun] && DRAFT[hakbun].draft && DRAFT[hakbun].draft.setuk) || '';
+  (s.rejects=s.rejects||[]).push({at:new Date().toISOString(), reason:reason||'', setuk:snapshot});
+  s.approved=false; s.approved_at=null;
+  s.held=false; s.held_at=null;                   // 물렸으면 판정을 한 것이다 — 보류가 아니다
+  s.done=true;                                    // 물렸다 = 여전히 초안 요청 상태
+  s.material_at=new Date().toISOString();         // 재료가 그대로여도 '다시 그려라'는 명시 요청이다
+  paintReq(hakbun);
+  SIG[hakbun]=materialSig(s);
+  PEND.add(hakbun); delete DRAFT[hakbun];         // 지금 보이는 초안은 방금 물린 것 — 새로 기다린다
+  save(hakbun,true);
+  paintStatus(hakbun); paintReview(hakbun); updateCounts();
+}
+
+async function fetchDraft(hakbun){
+  try{
+    const r=await fetch(`/draft/${hakbun}`);
+    if(r.status===404) delete DRAFT[hakbun];
+    else if(r.ok) DRAFT[hakbun]=await r.json();
+  }catch(e){ /* 서버가 죽어도 마킹은 계속할 수 있어야 한다 */ }
+  if(VIEW==='review' && CURH===hakbun) paintReview(hakbun);
+}
+
+/* ── 셸: 레일 · 화면 전환 · 이동 ──────────────────────────────────────────── */
+// 검수 레일에는 초안이 있는 학생만 올린다 — 없는 학생을 눌러 봐야 볼 게 없다.
+const inView = hk => VIEW==='mark' || !!DIDX[hk];
+const classList = () => STUDENTS.filter(s=>s.cls===CUR);
+const railList  = () => classList().filter(s=>inView(s.hakbun));
+
+function buildRail(){
+  const host=$('#rail'); if(!host) return;
+  host.innerHTML='';
+  const list=railList();
+  if(!list.length){
+    host.innerHTML=`<div class="blank" style="padding:var(--sp-5) var(--sp-4);font-size:var(--fs-sm)">
+      ${VIEW==='review'?'이 반에는 아직 나온 초안이 없습니다.':'학생이 없습니다.'}</div>`;
+    return;
+  }
+  for(const s of list){
+    const b=document.createElement('button');
+    b.className='ri'+(s.hakbun===CURH?' is-sel':''); b.id=`ri-${s.hakbun}`;
+    const rj=(STATE[s.hakbun]?.rejects||[]).length;
+    b.innerHTML=`<span class="dot" id="rd-${s.hakbun}"></span>
+      <span class="ri-nm">${esc(s.name)}</span>
+      ${rj?`<span class="ri-rj" title="반려 ${rj}회">${rj}</span>`:''}
+      <span class="ri-hb">${esc(s.hakbun)}</span>`;
+    b.onclick=()=>selectStudent(s.hakbun);
+    host.appendChild(b);
+    paintStatus(s.hakbun);
+  }
+}
+
+function selectStudent(hakbun){
+  CURH=hakbun;
+  $$('#rail .ri').forEach(b=>b.classList.toggle('is-sel', b.id===`ri-${hakbun}`));
+  const cur=$(`#ri-${hakbun}`); if(cur&&cur.scrollIntoView) cur.scrollIntoView({block:'nearest'});
+  renderWork();
+}
+
+// 레일 위아래 이동. 키보드가 속도를 만든다(Label Studio) — 172명을 마우스로만 훑지 않게.
+function step(dir){
+  const list=railList();
+  const i=list.findIndex(s=>s.hakbun===CURH);
+  const next=list[(i<0?0:i+dir)];
+  if(next) selectStudent(next.hakbun);
+}
+
+function renderWork(){
+  const work=$('#work'); if(!work) return;
+  work.innerHTML='';
+  const s=STUDENTS.find(x=>x.hakbun===CURH);
+  if(!s){
+    work.innerHTML=`<div class="blank">${ic('layers','ic-lg')}
+      ${VIEW==='review'?'검수할 초안이 아직 없습니다. 마킹 화면에서 [초안 요청]을 켜면 여기에 쌓입니다.'
+                       :'왼쪽에서 학생을 고르세요.'}</div>`;
+    return;
+  }
+  const [color,label]=stDot(s.status||'');
+  const head=document.createElement('div'); head.className='whead';
+  head.innerHTML=`<span class="nm">${esc(s.name)}</span><span class="hb">${esc(s.hakbun)}</span>
+    <span class="chip"><span class="pip" style="background:${color}"></span>${esc(label)}</span>
+    <span class="badge" id="bd-${s.hakbun}">마킹중</span>
+    <button class="goto" id="swap-${s.hakbun}">${VIEW==='mark'?'검수로 '+ic('arrow'):ic('arrow')+' 마킹으로'}</button>`;
+  work.appendChild(head);
+  const swap=$(`#swap-${s.hakbun}`);
+  if(swap) swap.onclick=()=>setView(VIEW==='mark'?'review':'mark', s.hakbun);
+
+  if(VIEW==='mark'){ buildCard(s); }
+  else{
+    const rv=document.createElement('div'); rv.className='rv';
+    rv.innerHTML=`<div class="rv-in" id="rv-in"></div>`;
+    work.appendChild(rv);
+    const act=document.createElement('div'); act.className='pact'; act.id='rv-act';
+    work.appendChild(act);
+    paintStatus(s.hakbun);
+    DRAFT[s.hakbun] ? paintReview(s.hakbun) : fetchDraft(s.hakbun).then(()=>paintReview(s.hakbun));
+    paintReview(s.hakbun);
+  }
+  paintStatus(s.hakbun);
+}
+
+function setView(v, keep){
+  VIEW=v;
+  $$('#views button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  buildRail();
+  const list=railList();
+  // 같은 학생을 계속 보고 있게 한다 — 그 학생이 이 화면에 없으면 첫 번째로 떨어진다.
+  const want=(keep && list.some(s=>s.hakbun===keep)) ? keep
+           : (list.some(s=>s.hakbun===CURH) ? CURH : (list[0]||{}).hakbun || null);
+  CURH=want;
+  $$('#rail .ri').forEach(b=>b.classList.toggle('is-sel', b.id===`ri-${CURH}`));
+  renderWork();
+  updateCounts();
+}
+
+function renderClass(cls){
+  CUR=cls;
+  const sel=$('#cls'); if(sel) sel.value=cls;
+  const list=railList();
+  CURH=(list[0]||{}).hakbun || null;
+  buildRail();
+  renderWork();
+  updateCounts();
+}
+
+/* 진행 숫자 = 반 기준. "얼마나 끝났나"는 요청 수가 아니라 확정 수다. */
+function updateCounts(){
+  const list=classList();
+  let bake=0, draft=0, ok=0, hold=0;
+  for(const s of list){
+    if(!STATE[s.hakbun]) continue;
+    const k=statusOf(s.hakbun).k;
+    if(k==='ok') ok++; else if(k==='draft') draft++; else if(k==='bake') bake++; else if(k==='hold') hold++;
+  }
+  const t=$('#total');
+  if(t) t.innerHTML = list.length
+    ? `<span>굽는 중 <b>${bake}</b></span><span>초안 <b>${draft}</b></span>${hold?`<span>보류 <b>${hold}</b></span>`:''}<span>확정 <b>${ok}</b> / ${list.length}</span>`
+    : '';
+  const pt=$('#progtxt'); if(pt) pt.innerHTML=`<span>${esc(CUR||'')} 진행</span><b>${ok} / ${list.length}</b>`;
+  const pb=$('#progbar'); if(pb) pb.style.width=(list.length?ok/list.length*100:0)+'%';
+  const vm=$('#v-mark');   if(vm) vm.textContent=String(list.length);
+  const vr=$('#v-review'); if(vr) vr.textContent=String(list.filter(s=>DIDX[s.hakbun]).length);
+  const sel=$('#cls');
+  if(sel && sel.querySelectorAll){
+    $$('#cls option').forEach(o=>{
+      const cl=STUDENTS.filter(s=>s.cls===o.value);
+      const a=cl.filter(s=>STATE[s.hakbun]&&STATE[s.hakbun].approved).length;
+      o.textContent=`${o.value}  ·  확정 ${a}/${cl.length}`;
+    });
+  }
+}
+
+/* 폴링 — 에이전트가 초안을 쓰면 배지가 스스로 바뀐다.
+   본문을 172명치 반복해 실어 나르지 않으려고 색인(/drafts-index)만 돌린다. */
+async function tick(){
+  const waiting=STUDENTS.some(s=>{const m=STATE[s.hakbun]; return m && m.done && !m.approved;});
+  if(!waiting && VIEW!=='review') return;
+  try{
+    const {drafts, pending}=await (await fetch('/drafts-index')).json();
+    const was=new Set(PEND);
+    PEND.clear(); (pending||[]).forEach(hk=>PEND.add(hk));   // 대기열 판정은 서버(pending.py)가 단일 출처
+    const changed=new Set();
+    let railDirty=false;
+    for(const s of STUDENTS){
+      const hk=s.hakbun;
+      if(drafts[hk]!==DIDX[hk]){
+        if(VIEW==='review' && s.cls===CUR && (!DIDX[hk] || !drafts[hk])) railDirty=true;  // 검수 목록 자체가 바뀐다
+        DIDX[hk]=drafts[hk]; delete DRAFT[hk]; changed.add(hk);
+      }
+      else if(was.has(hk)!==PEND.has(hk)) changed.add(hk);
+    }
+    if(changed.size){
+      if(railDirty) buildRail();
+      changed.forEach(paintStatus);
+      updateCounts();
+    }
+    if(VIEW==='review' && CURH && !DRAFT[CURH] && DIDX[CURH]) await fetchDraft(CURH);
+  }catch(e){ /* 서버가 잠깐 죽어도 마킹은 계속된다 */ }
+}
+
+/* 키보드 — 입력칸에 커서가 있을 때는 절대 가로채지 않는다(글자를 삼키면 신뢰를 잃는다). */
+function onKey(e){
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select'||(e.target&&e.target.isContentEditable)){
+    if(e.key==='Escape') e.target.blur();
+    return;
+  }
+  const k=e.key.toLowerCase();
+  if(k==='j'||e.key==='ArrowDown'){ e.preventDefault(); step(1); return; }
+  if(k==='k'||e.key==='ArrowUp'){ e.preventDefault(); step(-1); return; }
+  if(!CURH) return;
+  if(VIEW==='mark' && ['1','2','3','0'].includes(e.key)){
+    const v={'1':'상','2':'중','3':'하','0':''}[e.key];
+    STATE[CURH].level=v; paintLevel(CURH); save(CURH,true); return;
+  }
+  if(VIEW==='review' && DRAFT[CURH]){
+    if(k==='a' && !DRAFT[CURH].stale){ setApproved(CURH,true); return; }
+    if(k==='r'){ reject(CURH, ($(`#rj-${CURH}`)||{}).value?.trim()||''); return; }
+    if(k==='h'){ setHeld(CURH, !STATE[CURH].held); return; }
+  }
+}
+
+// 마킹 레코드 기본형 — 화면에 떠 있지 않은 학생도 상태 계산에 들어가므로 전원 먼저 만든다.
+function ensureState(s){
+  STATE[s.hakbun]=Object.assign(
+    {highlights:[],competency:'',level:'',extra:'',done:false,approved:false,approved_at:null,
+     held:false,held_at:null,rejects:[]},
+    STATE[s.hakbun], s);
+  SIG[s.hakbun]=materialSig(STATE[s.hakbun]);
+  debounced[s.hakbun]=debounce(fn=>fn(),400);
+}
+
+async function init(){
+  try{ CONFIG=await (await fetch('/config')).json(); }catch{}
+  try{ const m=await (await fetch('/marks')).json(); STATE=m||{};
+    for(const k in STATE){ if(STATE[k].competency) capsSet.add(STATE[k].competency); } refreshCaps(); }catch{}
+  try{ const ix=await (await fetch('/drafts-index')).json();
+       DIDX=ix.drafts||{}; (ix.pending||[]).forEach(hk=>PEND.add(hk)); }catch{}
+  const ctx=await (await fetch('/context')).json();
+  const ctxEl=$('#ctx');
+  if(ctxEl){
+    ctxEl.value=ctx.context||'';
+    ctxEl.addEventListener('input',debounce(()=>fetch('/context',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({context:ctxEl.value})}),400));
+    const box=$('#ctxbox'); if(box && !ctx.context) box.open=true;   // 비어 있으면 펴 둔다 — 반 단위 1회 입력이다
+  }
+  const data=await (await fetch('/students.json')).json();
+  STUDENTS=data.students||[];
+  SECTIONS=(data.sections&&data.sections.length)?data.sections:FALLBACK_SECTIONS;
+  CLASSES=data.classes||[...new Set(STUDENTS.map(s=>s.cls))];  // 단일 반 형식도 호환
+  STUDENTS.forEach(ensureState);
+
+  const sel=$('#cls');
+  if(sel){
+    sel.innerHTML=CLASSES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    sel.addEventListener('change',e=>renderClass(e.target.value));
+  }
+  $$('#views button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
+  if(document.addEventListener) document.addEventListener('keydown', onKey);
+
+  renderClass(CLASSES[0]);
+  setInterval(tick, POLL_MS);
+}
+init();
+</script></body></html>

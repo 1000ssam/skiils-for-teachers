@@ -5,7 +5,7 @@
 /* ═══ 디자인 토큰 ═════════════════════════════════════════════════════════════
    2단 구성: 원색(--p-*) → 시맨틱(--surface/text/border/accent/st-*).
    컴포넌트 CSS는 **시맨틱만** 참조한다. 색을 컴포넌트에 직접 박지 않는 이유:
-   상태색(굽는 중·초안·확정·보류)이 화면 세 곳(레일 점 · 배지 · 배너)에 동시에 나타나
+   상태색(만드는 중·초안·확정·보류)이 화면 세 곳(레일 점 · 배지 · 배너)에 동시에 나타나
    한 곳만 고치면 반드시 어긋나기 때문이다. 상태 = 토큰 한 줄이 단일 출처다. */
 :root{
   /* 원색 — 여기서만 실제 색값을 쓴다 */
@@ -54,6 +54,24 @@
   --accent-border:var(--p-green-200);
   --focus-ring:0 0 0 3px var(--p-green-100);
 
+  /* 입력 칸 — 테두리를 선이 아니라 **빛번짐**으로 그린다.
+     선을 하나 더 긋는 방식(왼쪽 굵은 막대)은 화면에 획을 늘릴 뿐이고 어디서나 본 모양이라
+     버렸다. 빛은 획이 아니라 **번지는 면**이라 원문·형광펜 위에 얹혀도 글자를 가리지 않는다.
+     색은 형광펜과 같은 호박색이다 — 이 도구가 원래 쓰는 색이라 새 색을 들이지 않는다.
+     번짐은 세 겹이다: 테두리를 대신하는 1px 링 → 바깥 번짐 → 안쪽 스밈. */
+  --glow-rgb:240,192,0;                       /* = --p-amber-400 */
+  /* 모든 입력 칸이 같은 세기다. 처음엔 '다 적은 칸은 가라앉힌다'고 세기를 나눴는데,
+     placeholder 가 없는 <select> 와 이미 채워진 칸만 흐려져 같은 화면에서 두 칸만
+     동떨어져 보였다. 세기로 상태를 말하는 건 포기하고 **한 값으로 통일**한다.
+     상태는 배지·점이 이미 말하고 있다(2026-08-03). */
+  --glow-field:0 0 0 1px rgba(var(--glow-rgb),.5),
+               0 0 9px -2px rgba(var(--glow-rgb),.55),
+               inset 0 0 14px -10px rgba(var(--glow-rgb),.9);
+  --glow-focus:0 0 0 1px rgba(var(--glow-rgb),.85),
+               0 0 14px -2px rgba(var(--glow-rgb),.7),
+               0 0 26px -8px rgba(var(--glow-rgb),.45),
+               inset 0 0 16px -11px rgba(var(--glow-rgb),1);
+
   /* 형광펜 */
   --hl-surface:var(--p-amber-100);
   --hl-underline:var(--p-amber-400);
@@ -90,9 +108,21 @@ button{border:1px solid var(--border-default);background:var(--surface-raised);b
 button:hover:not(:disabled){border-color:var(--border-strong);color:var(--text-strong)}
 button:disabled{opacity:.45;cursor:not-allowed}
 :focus-visible{outline:none;box-shadow:var(--focus-ring);border-color:var(--accent)}
-input[type=text],input:not([type]),textarea,select{border:1px solid var(--border-default);border-radius:var(--r-sm);
-  background:var(--surface-raised);padding:var(--sp-2) var(--sp-3);width:100%}
+/* 입력 칸 — **적는 칸인지 읽는 칸인지 한눈에 보여야 한다.**
+   테두리 선을 지우고 빛번짐이 그 자리를 대신한다.
+   세기는 모든 칸이 같다 — 채웠는지 여부로 세기를 나누면 <select> 처럼 채운다는 개념이
+   없는 칸이 혼자 흐려져 화면이 들쭉날쭉해진다. 변하는 건 '지금 쓰는 칸'뿐이다. */
+input[type=text],input:not([type]),textarea,select{border:1px solid transparent;border-radius:var(--r-sm);
+  background:var(--surface-raised);padding:var(--sp-2) var(--sp-3);width:100%;
+  box-shadow:var(--glow-field);
+  transition:box-shadow var(--dur)}
+/* 지금 쓰고 있는 칸. 아래 :focus-visible 의 초록 링보다 뒤에 와야 이긴다 —
+   초록은 확정의 색이라 '쓰는 중'에 켜지면 뜻이 어긋난다. */
+input[type=text]:focus,input:not([type]):focus,textarea:focus,select:focus{
+  outline:none;box-shadow:var(--glow-focus)}
 textarea{resize:vertical;line-height:var(--lh-body)}
+/* 체크박스는 폭 100%·빛번짐 대상이 아니다 */
+input[type=checkbox]{width:auto;box-shadow:none;border:1px solid var(--border-default)}
 .ic{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;
     stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px}
 .ic-lg{width:16px;height:16px}
@@ -133,7 +163,8 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
 .shell{display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);height:calc(100vh - var(--topbar-h))}
 .rail{display:flex;flex-direction:column;min-height:0;background:var(--surface-rail);
   border-right:1px solid var(--border-subtle)}
-.rail-head{padding:var(--sp-3);border-bottom:1px solid var(--border-subtle)}
+.rail-head{padding:var(--sp-3);border-bottom:1px solid var(--border-subtle);
+  display:flex;flex-direction:column;gap:var(--sp-2)}
 .rail-head select{font-size:var(--fs-md);font-weight:600;color:var(--text-strong);cursor:pointer}
 .rail-list{flex:1;min-height:0;overflow-y:auto;padding:var(--sp-2) var(--sp-2) var(--sp-4)}
 .ri{display:flex;align-items:center;gap:var(--sp-3);width:100%;border:1px solid transparent;background:transparent;
@@ -145,7 +176,7 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
 .ri-hb{margin-left:auto;font-size:var(--fs-xs);color:var(--text-faint);font-variant-numeric:tabular-nums}
 .ri-rj{font-size:var(--fs-xs);font-weight:700;color:var(--st-danger-fg);background:var(--st-danger-bg);
   border-radius:var(--r-pill);padding:0 5px}
-/* 진행 점 — ○미작업 ◐굽는 중 ●초안 ●확정 ⏸보류. 글자 대신 형태·색으로만 구분한다. */
+/* 진행 점 — ○미작업 ◐만드는 중 ●초안 ●확정 ⏸보류. 글자 대신 형태·색으로만 구분한다. */
 .dot{width:9px;height:9px;border-radius:50%;flex:none;border:1.5px solid var(--st-none-bd);background:var(--st-none-bg)}
 .dot--bake{border-color:var(--st-bake-bd);background:var(--st-bake-bg);
   box-shadow:inset 0 -5px 0 var(--st-bake-fg);animation:bake 1.6s ease-in-out infinite}
@@ -158,11 +189,16 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
 .rail-foot .prog b{color:var(--text-strong);font-variant-numeric:tabular-nums}
 .bar{height:3px;background:var(--surface-inset);border-radius:var(--r-pill);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--st-ok-fg);transition:width var(--dur)}
-/* 활동 맥락 = 반 단위 1회 입력. 학생 컬럼에 두면 172번 스쳐 지나가므로 레일 바닥에 고정한다. */
-.ctxbox summary{list-style:none;cursor:pointer;font-size:var(--fs-xs);font-weight:600;color:var(--text-muted);
-  display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-1) 0}
-.ctxbox summary::-webkit-details-marker{display:none}
-.ctxbox textarea{font-size:var(--fs-sm);min-height:64px;margin-top:var(--sp-2)}
+/* 활동 맥락 = 반 단위 1회 입력이고 **모든 세특의 첫 문장**이 된다.
+   접는 서랍으로 두었더니 접혀 있는 줄도 모르고 지나쳐 맥락이 빠진 세특이 나갔다.
+   접지 않는다 — 늘 펼쳐진 채로, 레일 맨 위에 둔다(실측 2026-08-03). */
+.ctxbox{display:flex;flex-direction:column;gap:var(--sp-2)}
+.ctxlab{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-xs);
+  font-weight:700;color:var(--text-strong)}
+.ctxlab .sub{font-weight:400;color:var(--text-muted)}
+.ctxbox textarea{font-size:var(--fs-sm);min-height:64px}
+.ctxwarn{display:none;font-size:var(--fs-xs);color:var(--st-bake-fg);line-height:var(--lh-body)}
+.ctxbox.is-empty .ctxwarn{display:block}
 
 /* ═══ 작업영역 ═════════════════════════════════════════════════════════════ */
 .work{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--surface-page)}
@@ -224,7 +260,8 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
   border-left:2px solid var(--hl-underline);padding-left:var(--sp-3)}
 /* '왜'는 한 줄로 안 끝난다. 입력칸이 잘리면 나중에 다시 읽을 수 없어 검수에서 쓸모가 없어진다. */
 .ann-why{font-size:var(--fs-md);min-height:34px;resize:none;overflow:hidden;line-height:var(--lh-tight)}
-.ann-why:placeholder-shown{border-style:dashed;background:var(--surface-sunken)}
+/* 빈 '왜' 칸을 점선+회색바탕으로 따로 표시하던 규칙은 걷어냈다. 테두리가 투명이라 점선은
+   이미 안 보였고, 회색 바탕만 남아 이 칸들만 톤이 달라졌다 — 입력 칸은 모두 같은 값이다. */
 .ann-rm{flex:none;border:none;background:transparent;color:var(--text-faint);padding:2px}
 .ann-rm:hover{color:var(--st-danger-fg);background:var(--st-danger-bg)}
 .empty{border:1px dashed var(--st-bake-bd);background:var(--st-bake-bg);color:var(--st-bake-fg);
@@ -337,20 +374,28 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
   <span class="brand">세특 마킹</span>
   <nav class="views" id="views">
     <button data-v="mark" class="on" title="이 반 전체 — 원문을 칠하고 재료를 만드는 화면">마킹 <span class="cnt" id="v-mark"></span></button>
-    <button data-v="review" title="초안이 나온 학생만 — 문장을 읽고 확정/다시를 판정하는 화면">검수 <span class="cnt" id="v-review"></span></button>
+    <!-- 검수 화면은 걷어냈다. 검수는 out/검수.xlsx 한 곳에서만 한다.
+         까닭: 이 화면은 원문을 싣지 않는데(아래 '검수 화면' 주석) 검수의 정의는
+         "나온 문장이 그 재료에서 왔는가"라 재료 없이 판정하게 된다. 엑셀은 세특 옆에
+         표시한 대목과 '왜'가 함께 붙어 정보가 더 많다. 사람 관문이 둘로 갈리면
+         정보가 적은 쪽이 앞에 서게 된다(2026-08-03 결정).
+         화면 코드는 지우지 않고 남겨 둔다 — 되돌릴 때 필요하고, 지우면 마킹까지 흔들린다. -->
   </nav>
   <div class="tally" id="total"></div>
   <details class="help">
     <summary><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 7.3v4M8 5.1v.3"/></svg>도움말</summary>
     <div class="sheet">
-      <p><b>마킹</b> — 원문에서 의미 있는 부분을 드래그하면 바로 형광펜이 칠해집니다. 칠한 구간마다 <b>왜</b> 골랐는지,
-        관측 역량과 <b>도달 상/중/하</b>를 넣고 <b>초안 요청</b>을 켜면 그 학생만 세특이 구워집니다.</p>
-      <p><b>안 칠하고 요청하면 AI가 원문에서 직접 고릅니다(위임)</b> — 대신 검수를 더 보셔야 합니다.</p>
-      <p><b>검수</b> — 나온 초안을 <b>[확정]</b> 또는 <b>[다시]</b>로 판정합니다. 확정한 것만 NEIS로 넘어갑니다.</p>
+      <p><b>① 활동 맥락</b>을 먼저 적습니다(왼쪽 맨 위, 반 전체에 한 번). 모든 세특의 첫 문장이 됩니다.</p>
+      <p><b>② 마킹</b> — 원문에서 의미 있는 부분을 드래그하면 바로 형광펜이 칠해집니다. 칠한 구간마다 <b>왜</b> 골랐는지,
+        관측 역량과 <b>도달 상/중/하</b>를 넣고 <b>마킹 끝</b>을 켭니다.</p>
+      <p>안 칠하고 <b>마킹 끝</b>을 켜면 AI가 학생 글을 읽고 직접 고릅니다. 무엇을 칠할지는 선생님이 정하십니다.</p>
+      <p><b>③ 다 하신 뒤</b> 한 번만 말씀하시면 세특을 만듭니다. <b>이미 만든 학생은 다시 만들지 않습니다</b> —
+        새로 표시하신 분과 [다시]로 물리신 분만 다시 씁니다.</p>
+      <p><b>④ 검수</b>는 <b>out/검수.xlsx</b> 에서 합니다. 세특 옆에 선생님이 표시한 대목과 그때 쓰신 '왜'가 함께 붙습니다.
+        <b>다시</b> 칸에 판정을 고르고 까닭을 적어 주시면 그대로 다음 초안에 실립니다.</p>
       <div class="keys">
         <kbd>J</kbd><span>다음 학생</span><kbd>K</kbd><span>이전 학생</span>
         <kbd>1</kbd><kbd>2</kbd><span>· <kbd>3</kbd> 도달 상·중·하</span>
-        <kbd>A</kbd><span>확정 (검수)</span><kbd>R</kbd><span>다시 (검수)</span><kbd>H</kbd><span>보류 (검수)</span>
         <kbd>Tab</kbd><span>다음 입력칸</span>
       </div>
     </div>
@@ -359,15 +404,24 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
 
 <div class="shell">
   <aside class="rail">
-    <div class="rail-head"><select id="cls" aria-label="반 선택"></select></div>
+    <div class="rail-head">
+      <select id="cls" aria-label="반 선택"></select>
+      <!-- 활동 맥락은 반 단위 1회 입력이고 **모든 세특의 첫 문장**이 된다. 레일 바닥에 두었더니
+           바닥까지 내려가야 보여서 놓치고, 맥락이 빠진 세특이 그대로 나갔다(실측 2026-08-03).
+           그래서 학생 목록보다 위, 시작 지점에 둔다. -->
+      <div class="ctxbox" id="ctxbox">
+        <div class="ctxlab">
+          <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 2.4h6l3.2 3.2v8H3.4z"/><path d="M5.8 8.2h4.4M5.8 10.6h3"/></svg>
+          ① 활동 맥락 <span class="sub">반 공통 · 먼저 적어 주세요</span>
+        </div>
+        <textarea id="ctx" rows="3" placeholder="예: OO의 내용을 토대로 △△를 창작하는 활동 — 반 전체 세특의 첫머리가 됩니다"></textarea>
+        <div class="ctxwarn" id="ctxwarn">아직 비어 있습니다 — 모든 세특의 첫 문장이 빠진 채로 나옵니다.</div>
+      </div>
+    </div>
     <div class="rail-list" id="rail"></div>
     <div class="rail-foot">
       <div class="prog"><span id="progtxt">—</span></div>
       <div class="bar"><i id="progbar" style="width:0%"></i></div>
-      <details class="ctxbox" id="ctxbox">
-        <summary><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 2.4h6l3.2 3.2v8H3.4z"/><path d="M5.8 8.2h4.4M5.8 10.6h3"/></svg>활동 맥락 (반 공통)</summary>
-        <textarea id="ctx" placeholder="예: OO의 내용을 토대로 △△를 창작하는 활동 — 반 전체 세특의 첫머리가 됩니다"></textarea>
-      </details>
     </div>
   </aside>
   <main class="work" id="work"></main>
@@ -389,7 +443,8 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
    "안 읽음"과 "읽고 괜찮음"이 반드시 구분돼야 한다 — 그래서 승인을 없애지 않는다.
 
    이 화면은 렌더하지 않는다. 요청 = 마킹 파일을 최신으로 만드는 것이고,
-   감시자(watch_done.sh) + 구독제 에이전트가 out/drafts_v3b/ 에 쓰면 폴링으로 집어온다. */
+   에이전트가 out/drafts_v3b/ 에 초안을 쓰면, 페이지를 열 때 한 번 읽어 온다.
+   (예전에는 지켜보는 창 + 폴링이었으나 둘 다 폐기했다 — 2026-08-03) */
 const $ = (s,r=document)=>r.querySelector(s);
 const $$ = (s,r=document)=>Array.from(r.querySelectorAll ? r.querySelectorAll(s) : []);
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -400,7 +455,7 @@ let STATE = {};                 // 학번 -> 마킹 레코드(디스크와 같�
 let STUDENTS = [], CLASSES = [], SECTIONS = [], CUR = null;
 let CURH = null;                // 지금 작업영역에 떠 있는 학생
 let VIEW = 'mark';              // 'mark' | 'review' — 두 화면은 독립이다
-let CONFIG = {limits:null, watch_cmd:'bash tool/watch_done.sh'};
+let CONFIG = {limits:null};   // watch_cmd 제거 — 지켜보는 창은 폐기됐다(2026-08-03)
 let DIDX = {};                  // 학번 -> 초안 파일 mtime(ms). 배지용 경량 색인
 const PEND = new Set();         // 지금 대기열(= 다시 그려질 학생). 판정은 서버의 pending.py 가 한다
 const DRAFT = {};               // 학번 -> /draft 응답 캐시
@@ -419,6 +474,8 @@ const ICONS = {
   x:'<path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4"/>',
   note:'<path d="M3.4 2.4h6l3.2 3.2v8H3.4z"/><path d="M5.8 8.2h4.4M5.8 10.6h3"/>',
   arrow:'<path d="M2.8 8h9.7M9 4.6L12.5 8 9 11.4"/>',
+  // 왼쪽 화살표 — 되돌아가는 이동(검수→마킹)에 쓴다. 같은 선을 쓰고 촉만 뒤집었다.
+  arrowL:'<path d="M2.8 8h9.7M6.3 4.6L2.8 8 6.3 11.4"/>',
   pen:'<path d="M11.2 2.6l2.2 2.2-7.5 7.5-2.9.7.7-2.9z"/>',
   clock:'<circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.4 1.6"/>',
   doc:'<path d="M3.6 2.4h5.6l3.2 3.2v8H3.6z"/><path d="M6 8.4h4.2M6 10.8h2.8"/>',
@@ -536,7 +593,7 @@ function paintLevel(hakbun){
   const cur=STATE[hakbun].level||'';
   $$(`#lv-${hakbun} button`).forEach(b=>b.classList.toggle('on', b.dataset.v===cur));
   const w=$(`#lvwarn-${hakbun}`);
-  if(w) w.innerHTML = (STATE[hakbun].done && !cur) ? ic('alert')+'<span>미지정 — AI가 추정합니다</span>' : '';
+  if(w) w.innerHTML = (STATE[hakbun].done && !cur) ? ic('alert')+'<span>안 정하셔도 됩니다 — AI가 알아서 정합니다</span>' : '';
 }
 
 // 요청 체크박스의 표시 상태. 체크박스 자체는 유지하되(요청≠판정) 눈에는 버튼처럼 보이게 한다.
@@ -548,8 +605,8 @@ function paintReq(hakbun){
 }
 
 /* ── 진행 상태 ─────────────────────────────────────────────────────────────
-   마킹중 → (초안 요청) 굽는 중 → 초안 나옴 → 확정.
-   '굽는 중'은 요청했는데 아직 안 나온 구간이다. 이걸 '마킹중'에 합치면
+   표시중 → (초안 요청) 만드는 중 → 초안 나옴 → 확정.
+   '만드는 중'은 요청했는데 아직 안 나온 구간이다. 이걸 '마킹중'에 합치면
    172명 훑을 때 "요청했는데 감시자가 안 떠 있음"을 못 알아챈다. */
 // 위임 = 하이라이트 0개. 개수로만 가른다 — '부실해 보이면' 류의 판단을 넣지 않는다(하드바인딩이 샌다).
 const isDelegated = hakbun => (STATE[hakbun].highlights || []).length === 0;
@@ -561,16 +618,16 @@ const isExtraSpan = span => /^\s*기타\s*요구사항/.test(String(span||''));
 function ledgerOrigin(span, dele, hi){
   span=String(span??'');
   if(isExtraSpan(span))
-    return {tag:'교사 요구사항(원문 근거 없음)', body:span.replace(/^\s*기타\s*요구사항\s*[—\-·:]*\s*/,'')};
-  if(dele) return {tag:'원문(AI 선택)', body:span};
+    return {tag:'선생님이 알려주신 사실(학생 글에 없음)', body:span.replace(/^\s*기타\s*요구사항\s*[—\-·:]*\s*/,'')};
+  if(dele) return {tag:'학생 글에서 AI가 고름', body:span};
   if(/교사\s*지정/.test(span) || (hi<0 && !/하이라이트/.test(span)))
-    return {tag:'교사 지정', body:span.replace(/^\s*교사\s*지정\s*[—\-·:]*\s*/,'')};
-  return {tag:'하이라이트', body:span};
+    return {tag:'선생님이 정하신 것', body:span.replace(/^\s*교사\s*지정\s*[—\-·:]*\s*/,'')};
+  return {tag:'선생님이 표시한 대목', body:span};
 }
 
 function statusOf(hakbun){
   const s=STATE[hakbun];
-  const d = isDelegated(hakbun) ? ' · 위임' : '';
+  const d = isDelegated(hakbun) ? ' · AI가 고름' : '';
   // 배지 문자열에 이모지를 넣지 않는다 — 상태색은 토큰(.b-ok/.b-hold)이 칠한다.
   if(s.approved) return {k:'ok', t:'확정'+d};
   if(!s.done) return {k:'', t:'마킹중'};
@@ -579,7 +636,7 @@ function statusOf(hakbun){
   if(s.held) return {k:'hold', t:'보류'+d};
   // 대기열에 있으면 지금 보이는 초안은 다시 그려질 것 — '초안 나옴'이라고 하면 안 된다.
   return (DIDX[hakbun] && !PEND.has(hakbun))
-    ? {k:'draft', t:'초안 나옴'+d} : {k:'bake', t:'굽는 중'+d};
+    ? {k:'draft', t:'초안 나옴'+d} : {k:'bake', t:'만드는 중'+d};
 }
 
 /* 상태를 화면 두 곳에 동시에 칠한다: 작업영역 배지 + 레일 점.
@@ -607,7 +664,7 @@ function renderCard(hakbun){
   const hls=$(`#hls-${hakbun}`);
   if(!hls) return;
   hls.innerHTML = s.highlights.length ? ''
-    : `<div class="empty">${ic('alert')} 표시한 핵심이 없습니다 — 이대로 요청하면 <b>AI가 원문에서 직접 고릅니다(위임)</b>.
+    : `<div class="empty">${ic('alert')} 표시하신 곳이 없습니다 — 이대로 요청하면 <b>AI가 학생 글을 읽고 직접 고릅니다</b>.
        원문을 드래그하면 그 부분만 재료가 됩니다.</div>`;
   s.highlights.forEach((h,i)=>{
     const row=document.createElement('div'); row.className='ann'; row.dataset.hi=String(i);
@@ -635,7 +692,7 @@ function renderCard(hakbun){
   if(cnt){
     const blank=s.highlights.filter(h=>!(h.why||'').trim()).length;
     cnt.textContent = s.highlights.length
-      ? `${s.highlights.length}건${blank?` · '왜' 비어 있음 ${blank}`:''}` : '없음 (위임)';
+      ? `${s.highlights.length}건${blank?` · '왜' 비어 있음 ${blank}`:''}` : '없음 (AI가 고름)';
   }
 }
 
@@ -667,7 +724,7 @@ function buildCard(s){
         <div class="fld">
           <label>도달 <span class="sub">— 마지막 '이를 통해 …' 문장을 어디까지 쓸지</span></label>
           <div class="seg" id="lv-${hakbun}">
-            <button data-v="상">상</button><button data-v="중">중</button><button data-v="하">하</button><button data-v="">미지정</button>
+            <button data-v="상">상</button><button data-v="중">중</button><button data-v="하">하</button><button data-v="">안 정함</button>
           </div>
           <div class="warn-line" id="lvwarn-${hakbun}"></div>
         </div>
@@ -680,8 +737,8 @@ function buildCard(s){
         <div class="hr"></div>
         <label class="req" id="reqw-${hakbun}">
           <input type="checkbox" id="done-${hakbun}">
-          <span>초안 요청</span>
-          <span class="sub">이 학생만 구움</span>
+          <span>마킹 끝</span>
+          <span class="sub">이 학생은 다 표시했습니다</span>
         </label>
         <div class="savebar" id="save-${hakbun}"></div>
         <div id="rjnote-${hakbun}"></div>
@@ -712,12 +769,12 @@ function buildCard(s){
   const rj=(STATE[hakbun].rejects||[]).length;
   const note=$(`#rjnote-${hakbun}`);
   if(note && rj) note.innerHTML=`<div class="note n-warn">${ic('undo')}<span class="grow">
-    <b>반려 이력 ${rj}회</b> — 사유가 다음 렌더에 그대로 전달됩니다. 검수 화면에서 볼 수 있습니다.</span></div>`;
+    <b>다시 쓰라고 하신 적 ${rj}번</b> — 적으신 이유가 다음 초안에 그대로 전달됩니다. 검수 화면에서 볼 수 있습니다.</span></div>`;
   renderCard(hakbun);
 }
 
 /* ── 검수 화면 ─────────────────────────────────────────────────────────────
-   본문 · 바이트 · 근거 대조 · 표면 검증 · [확정]/[다시].
+   본문 · 길이 · 근거 대조 · 자동 검사 · [확정]/[다시].
    여기가 사람 Tier-2 검수 자리다. 원문은 싣지 않는다 — 마킹 화면의 일이고,
    초안에서 원문으로 되짚는 hover 는 실제로 쓰이지 않았다(교사 관찰). 대신 '마킹 재료'를 접어 둔다.
    바이트·금지어·종결·레벨 판정은 서버(validate_draft.py) 결과를 그대로 그린다 —
@@ -732,9 +789,9 @@ function rejectLog(s){
         <div class="setuk" style="margin-top:6px">${esc(r.setuk)}</div></details>`:''}</div>`).join('');
   // 3회면 문장이 아니라 재료 문제일 가능성이 높다.
   const hint=rs.length>=3
-    ? `<div class="r hint">3회 이상 물렸습니다 — 문장이 아니라 재료(얇은 하이라이트·빈 '왜') 문제일 수 있습니다. 마킹을 손보세요.</div>`
+    ? `<div class="r hint">세 번 넘게 다시 쓰셨습니다 — 문장이 아니라 표시하신 대목이 짧거나 '왜'가 비어 있어서일 수 있습니다. 표시를 손봐 주세요.</div>`
     : '';
-  return `<div class="plabel">반려 이력 <span class="sub">${rs.length}회 · 다음 렌더에 그대로 전달</span></div>
+  return `<div class="plabel">다시 쓰라고 하신 것 <span class="sub">${rs.length}번 · 다음 초안에 그대로 전달</span></div>
           <div class="rjlog">${rows}${hint}</div>`;
 }
 
@@ -755,11 +812,11 @@ function materialBox(s){
       <div class="w">${h.why?esc(h.why):'<span class="mut">— \'왜\' 비어 있음</span>'}</div></div>`).join('');
   const meta=[
     s.competency?`역량: ${esc(s.competency)}`:'',
-    s.level?`도달: ${esc(s.level)}`:'도달: 미지정',
+    s.level?`도달 수준: ${esc(s.level)}`:'도달 수준: 안 정하심',
     s.extra?`기타 요구사항: ${esc(s.extra)}`:'',
   ].filter(Boolean).join(' · ');
-  return `<details class="mat"><summary>${ic('layers')} 마킹 재료 보기 — 하이라이트 ${hs.length}건</summary>
-    <div class="mat-in">${rows||'<div class="mut">칠한 구간이 없습니다(위임).</div>'}
+  return `<details class="mat"><summary>${ic('layers')} 선생님이 표시하신 것 — ${hs.length}군데</summary>
+    <div class="mat-in">${rows||'<div class="mut">칠하신 곳이 없습니다 — AI가 직접 골랐습니다.</div>'}
       <div class="mut" style="font-size:var(--fs-sm)">${meta}</div></div></details>`;
 }
 
@@ -771,10 +828,10 @@ function paintReview(hakbun){
     const dele=isDelegated(hakbun);
     host.innerHTML=`
       <div class="note n-warn">${ic('clock')}<span class="grow">
-        ${s.done ? (dele ? '<b>초안을 굽는 중</b> — 형광펜이 없어 AI가 원문에서 직접 고릅니다(위임)'
-                         : '<b>초안을 굽는 중</b> — 감시자가 집어가면 여기에 나타납니다')
-                 : '<b>아직 요청하지 않았습니다</b> — 마킹 화면에서 [초안 요청]을 켜면 이 학생만 구워집니다.'}
-        <span class="q">감시자가 안 떠 있으면 다른 터미널에서 <code>${esc(CONFIG.watch_cmd)}</code></span></span>
+        ${s.done ? (dele ? '<b>아직 세특이 없습니다</b> — 형광펜이 없어 AI가 학생 글을 읽고 직접 고릅니다'
+                         : '<b>아직 세특이 없습니다</b>')
+                 : '<b>마킹이 아직 안 끝났습니다</b> — [마킹 끝]을 켜면 다음에 쓸 때 함께 들어갑니다.'}
+        <span class="q">세특은 표시를 다 하신 뒤 한 번에 만듭니다.</span></span>
         <button id="chk-${hakbun}">지금 확인</button></div>
       ${materialBox(s)}
       ${rejectLog(s)}`;
@@ -806,12 +863,12 @@ function paintReview(hakbun){
     v.issues.forEach(x=>items.push(['bad',x]));
     v.warns.forEach(x=>items.push(['warn',x]));
     if(v.repeats?.length) items.push(['warn',`반복어 ${v.repeats.join(', ')}`]);
-    if(!items.length) items.push(['ok','표면 검증 통과 — 바이트·종결·금지어 이상 없음']);
+    if(!items.length) items.push(['ok','자동 검사 통과 — 길이·문장 끝맺음·못 쓰는 말 이상 없음']);
   }
   const iconOf=c=>c==='ok'?'check':'alert';
 
   const okbar=s.approved
-    ? `<div class="note n-ok">${ic('check')}<span class="grow"><b>확정됨</b> — NEIS 이관 대상</span>
+    ? `<div class="note n-ok">${ic('check')}<span class="grow"><b>확정됨</b> — 나이스에 넣을 것</span>
          <span class="undo">${esc((s.approved_at||'').slice(0,16).replace('T',' '))}
            <button id="undo-${hakbun}">확정 취소</button>
            <button class="goto" id="next-${hakbun}">다음 검수 대상 ${ic('arrow')}</button></span></div>` : '';
@@ -822,11 +879,12 @@ function paintReview(hakbun){
   const stale=data.stale && !s.approved
     ? `<div class="note n-warn">${ic('clock')}<span class="grow">이 초안은 <b>지금 마킹의 결과가 아닙니다</b>
         — 마킹을 고친 뒤라 다시 그려지는 중입니다.</span></div>` : '';
-  // 위임은 AI가 의미까지 고른 것 = 검수 비용이 올라가는 구간. 확정 전에 더 보라고 알린다.
+  /* 위임은 AI가 의미까지 고른 것. **사실만 적는다.**
+     "직접 칠하는 편이 빠릅니다" 가 여기 있었는데, 규칙 8이 예시로 든 금지 문장 그 자체다
+     — 무엇을 칠할지는 선생님이 정하신다. 훈수는 산출물·화면·로그 어디에도 넣지 않는다. */
   const deleBar=dele
-    ? `<div class="note n-warn">${ic('alert')}<span class="grow">형광펜이 없어 <b>AI가 원문에서 직접 골랐습니다(위임)</b>
-        — 근거가 원문 어디서 왔는지 아래에서 확인하세요. 반복해서 물리게 되면 다시 굽지 말고
-        <b>직접 칠하는 편이 빠릅니다.</b></span></div>` : '';
+    ? `<div class="note n-warn">${ic('alert')}<span class="grow">형광펜이 없어 <b>AI가 학생 글을 읽고 직접 골랐습니다</b>
+        — 근거가 원문 어디서 왔는지 아래에서 확인하세요.</span></div>` : '';
   /* 기타 요구사항을 못 지켰으면 그 사유를 교사에게 **직접** 보여준다(교사 요청 2026-07-31).
      묻히면 안 되는 정보다 — 교사가 요청한 걸 물렸다는 뜻이라, 본문보다 먼저 읽혀야 한다. */
   const unmetBar=(d.unmet||'').trim()
@@ -849,7 +907,7 @@ function paintReview(hakbun){
       <div class="led" style="margin-top:var(--sp-2)">${led}</div>
     </div>
     <div>
-      <div class="plabel">표면 검증</div>
+      <div class="plabel">자동 검사</div>
       <div class="chk" style="margin-top:var(--sp-2)">
         ${items.map(([c,t])=>`<div class="item ${c}">${ic(iconOf(c))}<span>${esc(t)}</span></div>`).join('')}
       </div>
@@ -876,8 +934,8 @@ function paintReview(hakbun){
 
 function panelActions(hakbun, canApprove){
   const held=STATE[hakbun].held;
-  return `<input class="rj" id="rj-${hakbun}" placeholder="반려 사유(선택) — 다음 렌더에 그대로 전달됩니다">
-    <button id="hold-${hakbun}" title="못 정하겠을 때. 재렌더하지 않고 '나중에 볼 것'으로 표시만 합니다.">
+  return `<input class="rj" id="rj-${hakbun}" placeholder="다시 쓸 이유(안 적으셔도 됩니다) — 다음 초안에 그대로 전달됩니다">
+    <button id="hold-${hakbun}" title="못 정하겠을 때. 다시 만들지 않고 '나중에 볼 것'으로 표시만 합니다.">
       ${ic('pause')}${held?'보류 해제':'보류'}</button>
     <button class="no" id="no-${hakbun}">${ic('undo')}다시</button>
     <button class="yes" id="yes-${hakbun}"${canApprove?'':' disabled title="마킹이 바뀌었습니다 — 새 초안을 기다리세요"'}>
@@ -958,7 +1016,7 @@ function buildRail(){
     const rj=(STATE[s.hakbun]?.rejects||[]).length;
     b.innerHTML=`<span class="dot" id="rd-${s.hakbun}"></span>
       <span class="ri-nm">${esc(s.name)}</span>
-      ${rj?`<span class="ri-rj" title="반려 ${rj}회">${rj}</span>`:''}
+      ${rj?`<span class="ri-rj" title="다시 쓰라고 하신 적 ${rj}번">${rj}</span>`:''}
       <span class="ri-hb">${esc(s.hakbun)}</span>`;
     b.onclick=()=>selectStudent(s.hakbun);
     host.appendChild(b);
@@ -987,7 +1045,7 @@ function renderWork(){
   const s=STUDENTS.find(x=>x.hakbun===CURH);
   if(!s){
     work.innerHTML=`<div class="blank">${ic('layers','ic-lg')}
-      ${VIEW==='review'?'검수할 초안이 아직 없습니다. 마킹 화면에서 [초안 요청]을 켜면 여기에 쌓입니다.'
+      ${VIEW==='review'?'검수할 초안이 아직 없습니다. (검수는 out/검수.xlsx 에서 합니다)'
                        :'왼쪽에서 학생을 고르세요.'}</div>`;
     return;
   }
@@ -996,7 +1054,7 @@ function renderWork(){
   head.innerHTML=`<span class="nm">${esc(s.name)}</span><span class="hb">${esc(s.hakbun)}</span>
     <span class="chip"><span class="pip" style="background:${color}"></span>${esc(label)}</span>
     <span class="badge" id="bd-${s.hakbun}">마킹중</span>
-    <button class="goto" id="swap-${s.hakbun}">${VIEW==='mark'?'검수로 '+ic('arrow'):ic('arrow')+' 마킹으로'}</button>`;
+    <button class="goto" id="swap-${s.hakbun}">${VIEW==='mark'?'검수로 '+ic('arrow'):ic('arrowL')+' 마킹으로'}</button>`;
   work.appendChild(head);
   const swap=$(`#swap-${s.hakbun}`);
   if(swap) swap.onclick=()=>setView(VIEW==='mark'?'review':'mark', s.hakbun);
@@ -1050,7 +1108,7 @@ function updateCounts(){
   }
   const t=$('#total');
   if(t) t.innerHTML = list.length
-    ? `<span>굽는 중 <b>${bake}</b></span><span>초안 <b>${draft}</b></span>${hold?`<span>보류 <b>${hold}</b></span>`:''}<span>확정 <b>${ok}</b> / ${list.length}</span>`
+    ? `<span>만드는 중 <b>${bake}</b></span><span>초안 <b>${draft}</b></span>${hold?`<span>보류 <b>${hold}</b></span>`:''}<span>확정 <b>${ok}</b> / ${list.length}</span>`
     : '';
   const pt=$('#progtxt'); if(pt) pt.innerHTML=`<span>${esc(CUR||'')} 진행</span><b>${ok} / ${list.length}</b>`;
   const pb=$('#progbar'); if(pb) pb.style.width=(list.length?ok/list.length*100:0)+'%';
@@ -1137,9 +1195,14 @@ async function init(){
   const ctxEl=$('#ctx');
   if(ctxEl){
     ctxEl.value=ctx.context||'';
+    /* 비었는지를 칸 자체가 말하게 한다 — 접는 서랍이 아니라 늘 보이는 칸이라
+       '펴 준다'는 개념이 없어졌다. 비면 경고 줄이 뜨고, 적으시면 바로 사라진다. */
+    const box=$('#ctxbox');
+    const paintCtx=()=>{ if(box) box.classList.toggle('is-empty', !ctxEl.value.trim()); };
+    paintCtx();
+    ctxEl.addEventListener('input',()=>{ paintCtx(); });
     ctxEl.addEventListener('input',debounce(()=>fetch('/context',{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify({context:ctxEl.value})}),400));
-    const box=$('#ctxbox'); if(box && !ctx.context) box.open=true;   // 비어 있으면 펴 둔다 — 반 단위 1회 입력이다
   }
   const data=await (await fetch('/students.json')).json();
   STUDENTS=data.students||[];
@@ -1156,7 +1219,10 @@ async function init(){
   if(document.addEventListener) document.addEventListener('keydown', onKey);
 
   renderClass(CLASSES[0]);
-  setInterval(tick, POLL_MS);
+  /* 폴링을 걷어냈다. 세특은 이제 실시간으로 나오지 않고 선생님이 다 표시하신 뒤 한 번에 만든다.
+     남겨 두면 해로웠다 — tick() 은 '초안 요청이 켜진 학생이 하나라도 있을 때'만 돌기 때문에,
+     체크를 껐다 켜는 사이에 떨어진 초안이 색인에 안 올라가 **결과가 지워진 것처럼 보였다**
+     (실측 2026-08-03). 초안 목록은 페이지를 열 때 한 번만 읽는다. */
 }
 init();
 </script></body></html>

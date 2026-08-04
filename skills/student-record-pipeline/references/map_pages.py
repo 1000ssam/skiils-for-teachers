@@ -240,17 +240,38 @@ def main():
         id_index = {s[B.col_id]: s[B.col_name] for s in students}
         groups, digitals = build_groups(B, cls)
 
-        # 디지털 제출: 파일명에 이름이 있어 스캔 순서와 무관하게 직접 정박
-        direct = {}
+        # 디지털 제출: 파일명에 학번 또는 이름이 있어 스캔 순서와 무관하게 직접 정박.
+        # 키는 반드시 학번이다 — 이름으로 키를 잡으면 동명이인이 서로를 덮어써 오매핑이 된다(헌법 1).
+        name_ids = collections.defaultdict(list)
+        for s in students:
+            name_ids[s[B.col_name]].append(s[B.col_id])
+        direct, direct_why = {}, {}
         for fn in digitals:
-            nm, _ = best_name([fn.split("_")[0]], roster_names)
+            stem = fn.split("_")[0]
             key = next((k for k in B.keys if f"_{k}" in fn), B.keys[0])
-            if nm:
-                direct.setdefault(nm, {k: None for k in B.keys})[key] = fn
-            else:
-                holds.append((cls, "-", "-", f"디지털 파일 이름 미확인: {fn}", "❓오독"))
+            if stem in id_index:                       # 파일명 = 학번(유일키). 가장 강한 정박.
+                sid_f, why_f = stem, "파일명=학번"
+            elif len(name_ids.get(stem, [])) > 1:      # 정본에 같은 이름이 둘 이상 → 이름만으론 못 가른다.
+                # best_name 은 1·2등 점수차를 요구해 동명이인이면 늘 None 을 내므로 여기서 먼저 가른다.
+                # (그래야 "이름 미확인"이 아니라 진짜 까닭인 동명이인이 교사에게 보인다)
+                holds.append((cls, "-", "-",
+                              f"동명이인이라 이름만으로 못 정박: {fn} ({stem} {name_ids[stem]}) "
+                              f"— 파일명을 학번으로 바꿔 주세요", "❓오독"))
+                continue
+            else:                                      # 파일명 = 이름
+                nm_f, _ = best_name([stem], roster_names)
+                cands = name_ids.get(nm_f, []) if nm_f else []
+                if len(cands) == 1:
+                    sid_f, why_f = cands[0], "파일명=이름"
+                else:
+                    holds.append((cls, "-", "-",
+                                  f"동명이인이라 이름만으로 못 정박: {fn} ({nm_f} {cands})" if cands
+                                  else f"디지털 파일 이름 미확인: {fn}", "❓오독"))
+                    continue
+            direct.setdefault(sid_f, {k: None for k in B.keys})[key] = fn
+            direct_why[sid_f] = why_f
 
-        seq = [s for s in students if s[B.col_name] not in direct]
+        seq = [s for s in students if s[B.col_id] not in direct]
         res, spare_g, unmatched_s = {}, [], []
         for gi, sj, why in align(groups, seq, roster_names, B):
             if sj is None:
@@ -259,13 +280,13 @@ def main():
             if gi is None:
                 unmatched_s.append(s)
             else:
-                res[s[B.col_name]] = (groups[gi], why)
+                res[s[B.col_id]] = (groups[gi], why)
 
         for s in list(unmatched_s):                     # 순서 이탈 구제
             for gi in list(spare_g):
                 g = groups[gi]
                 if any(h == s[B.col_id] for h in g["ids"]) and any(n == s[B.col_name] for n in g["names"]):
-                    res[s[B.col_name]] = (g, ["학번=", "이름=", "순서이탈"])
+                    res[s[B.col_id]] = (g, ["학번=", "이름=", "순서이탈"])
                     spare_g.remove(gi); unmatched_s.remove(s); break
         for gi in spare_g:
             g = groups[gi]
@@ -273,15 +294,15 @@ def main():
             holds.append((cls, "-", "-", f"학생에 못 붙은 스캔 {pages} "
                                          f"학번{sorted(set(g['ids']))} 이름{sorted(set(g['names']))}", "🚩여분"))
 
-        placed = {s[B.col_id] for s in students if s[B.col_name] in res or s[B.col_name] in direct}
+        placed = {s[B.col_id] for s in students if s[B.col_id] in res or s[B.col_id] in direct}
 
         for s in students:
             nm, sid = s[B.col_name], s[B.col_id]
-            if nm in direct:
-                g = dict(direct[nm]); g.update(names=[nm], ids=[], note=["디지털 제출"])
-                why, st = ["파일명=이름"], "✅디지털"
+            if sid in direct:
+                g = dict(direct[sid]); g.update(names=[nm], ids=[sid], note=["디지털 제출"])
+                why, st = [direct_why[sid]], "✅디지털"
             else:
-                g, why = res.get(nm, (None, []))
+                g, why = res.get(sid, (None, []))
                 if g is None:
                     st = "❌미제출"
                 else:

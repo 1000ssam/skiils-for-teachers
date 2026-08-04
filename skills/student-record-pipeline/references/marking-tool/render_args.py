@@ -123,13 +123,14 @@ def build(hakbuns):
         })
         if not hls:
             if srcs:
-                notes.append(f"📖 {hk} {m.get('name','')} — 하이라이트 0개 → **위임**(AI가 원문에서 직접 고름). "
-                             "검수에서 먼저 볼 것")
+                notes.append(f"📖 {hk} {m.get('name','')} — 표시하신 곳이 없어 "
+                             "AI가 학생 글을 읽고 직접 고릅니다")
             else:
-                notes.append(f"⚠️ {hk} {m.get('name','')} — 하이라이트도 원문도 없다. 렌더할 재료가 0이다")
+                notes.append(f"⚠️ {hk} {m.get('name','')} — 표시하신 곳도 학생 글도 없습니다. "
+                             "쓸 재료가 하나도 없습니다")
         if len(rejects) >= REJECT_HINT:
-            notes.append(f"🔁 {hk} {m.get('name','')} — {len(rejects)}회 물림. "
-                         "문장이 아니라 재료(얇은 하이라이트·빈 '왜') 문제일 가능성이 높다 — 마킹을 손볼 것")
+            notes.append(f"🔁 {hk} {m.get('name','')} — {len(rejects)}번 다시 쓰셨습니다. "
+                         "문장보다는 표시하신 대목이 짧거나 '왜'가 비어 있어서일 수 있습니다")
     # drafts_dir — 서브에이전트가 초안을 **직접 써야 할** 자리. 여기서 내려보내는 이유는
     # contract 와 같다: 라인마다 경로가 다르므로 워크플로 스크립트에 박으면 다른 라인의
     # 초안 폴더에 쓰는 조용한 사고가 난다. 화면(/draft)이 읽는 곳과 반드시 같아야 한다.
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     to_stdout = "--stdout" in sys.argv
     targets = argv or pending()
     if not targets:
-        print("대기열이 비었습니다 — 렌더할 학생이 없습니다.", file=sys.stderr)
+        print("기다리는 학생이 없습니다 — 새로 만들 세특이 없습니다.", file=sys.stderr)
         sys.exit(0)
     payload, notes = build(targets)
     rows = payload["students"]
@@ -155,19 +156,19 @@ if __name__ == "__main__":
     else:
         out = os.path.join(ROOT, "out", "render_args.json")
         json.dump(payload, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        print(f"렌더 입력 {len(rows)}명 → {out}", file=sys.stderr)
+        print(f"세특 만들 학생 {len(rows)}명 → {out}", file=sys.stderr)
     err = sys.stderr
-    print(f"계약서: {payload['contract']}", file=err)
-    print("레벨 분포:", dict(Counter(r["level"] or "미지정" for r in rows)), file=err)
+    print(f"작성 기준 문서: {payload['contract']}", file=err)
+    print("도달 수준 분포:", dict(Counter(r["level"] or "안 정하심" for r in rows)), file=err)
     delegated = sum(1 for r in rows if not r["highlights"] and r["sources"])
     if delegated:
-        print(f"위임(마킹 0개 → AI가 직접 고름) {delegated}/{len(rows)}명 "
-              "— 검수 비용이 올라가는 구간이다", file=err)
+        print(f"선생님이 표시 안 하신 학생 {delegated}/{len(rows)}명 "
+              "— AI가 학생 글을 읽고 직접 고릅니다", file=err)
     reworks = sum(1 for r in rows if r["rejects"])
-    if reworks: print(f"재렌더(물린 적 있음) {reworks}명", file=err)
+    if reworks: print(f"다시 만드는 학생 {reworks}명 (전에 [다시] 하신 적 있음)", file=err)
     extras = [r for r in rows if r["extra"]]
     if extras:
-        print(f"기타 요구사항 {len(extras)}명 — 계약서 기본값을 이긴다(§0-3). 검수에서 지시대로 나왔는지 볼 것", file=err)
+        print(f"당부하신 것이 있는 학생 {len(extras)}명 — 기본 규칙보다 이 당부가 우선입니다", file=err)
         for r in extras: print(f"   · {r['hakbun']} {r['name']}: “{r['extra']}”", file=err)
     for n in notes: print(n, file=err)
     for reason, n in reason_signal(rows):

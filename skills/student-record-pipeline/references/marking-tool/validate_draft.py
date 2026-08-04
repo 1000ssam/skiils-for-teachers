@@ -27,8 +27,9 @@ def draft_rules():
     """
     p = os.path.join(ROOT, "draft-rules.json")
     if not os.path.exists(p):
-        print(f"⚠ draft-rules.json 없음 ({p}) — 금지어 검사 생략, 바이트 상한 {DEFAULT_BYTE_MAX}B 적용. "
-              f"인테이크 스펙의 length_budget·extra_forbidden 으로 이 파일을 만들 것.", file=sys.stderr)
+        print(f"⚠ 규칙 파일이 없습니다 ({p}) — 못 쓰는 말 검사를 건너뛰고, "
+              f"길이는 {DEFAULT_BYTE_MAX}바이트(한글 약 {DEFAULT_BYTE_MAX//3}자)로 잡습니다. "
+              f"사전 인터뷰에서 정한 길이·못 쓰는 말로 이 파일을 만들어 주세요.", file=sys.stderr)
         return {"byte_max": DEFAULT_BYTE_MAX, "byte_short": DEFAULT_BYTE_SHORT, "forbidden": [], "soft": []}
     r = json.load(open(p, encoding="utf-8"))
     return {"byte_max": int(r.get("byte_max", DEFAULT_BYTE_MAX)),

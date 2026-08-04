@@ -15,9 +15,11 @@ Tier 2(날조 가드·평가요소 정렬·근거 정박)는 LLM 심판 몫으�
 import argparse, json, os, re, sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
+sys.path.insert(0, os.path.join(_HERE, "deep"))   # sentence_metrics 는 deep/ 로 내려갔다
 from neis_bytes import neis_bytes  # noqa: E402
-import sentence_metrics  # noqa: E402  (문장 만연도 표면 신호 — advisory)
+import sentence_metrics  # noqa: E402  (문장이 늘어지는지 보는 참고 신호)
 
 FORBIDDEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "forbidden-terms.txt")
 RECOMMENDED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recommended-structure.txt")
@@ -28,7 +30,6 @@ SCORE_PATTERNS = [
     (r"석차", "석차"),
     (r"백분위", "백분위"),
     (r"원점수", "원점수"),
-    (r"\d+\s*%|\d+\s*퍼센트", "백분율"),
     (r"상위\s*\d+", "상위 %"),
     (r"만점", "만점"),
     # 🚩 `[A-E]\b` 로 쓰면 안 된다 — 뒤에 한글이 붙는 '성취도 A에'/'성취수준 A로' 는 A와 한글 둘 다
@@ -38,6 +39,14 @@ SCORE_PATTERNS = [
     # '성취수준 A' 는 등급 표기 중 가장 흔한 축인데 위 패턴 어디에도 안 걸렸다.
     # 한글 수준명(상/중/하)도 같이 막는다 — 루브릭 판정은 톤으로 녹이는 내부 신호일 뿐이다(헌법 5).
     (r"성취\s*수준\s*(?:[A-E](?![A-Za-z])|[상중하])", "성취수준 등급"),
+]
+# 🚩 맨 백분율은 **하드가 아니라 advisory** 다(D3 — 의미축은 문맥이 진실을 정한다).
+#    "소년범죄가 38% 줄었음"은 학생 성적이 아니라 학생이 **인용한 통계**이고,
+#    자료를 근거로 삼은 좋은 세특일수록 이 패턴에 걸린다(실측 2026-08-02, 사회과제연구).
+#    진짜 성적 표기(석차·백분위·상위 N·등급·원점수·만점)는 위 SCORE_PATTERNS 가 이미 잡는다.
+#    소수부까지 한 덩어리로 잡는다 — 안 그러면 '38.46%' 에서 '46%' 만 보고해 원문에서 못 찾는다.
+SCORE_ADVISORY = [
+    (r"\d+(?:\.\d+)?\s*%|\d+(?:\.\d+)?\s*퍼센트", "백분율 — 학생 성적인지 인용 통계인지 확인"),
 ]
 # 특수문자·문단구분 기호(번호) — 물결(~)은 정상 한국어라 제외.
 # 🚩 가운뎃점(·)은 아래 MIDDLE_DOT_PAT로 별도 하드플래그(세특 산문에서 나열 압축=AI slop).
@@ -101,7 +110,12 @@ def ends_in_mieum(syl):
 
 
 def split_sents(text):
-    return [s.strip() for s in re.split(r"\.", text) if len(s.strip()) >= 2]
+    # 🚩 소수점을 문장 끝으로 읽으면 안 된다. '소년범죄가 38.46% 줄어'가 '…줄어 38' 에서 끊겨
+    #    **명사형종결위반(하드플래그)** 으로 오탐되고, 그 위반은 SKILL.md Step6 에서
+    #    **자동 재작성 대상**이라 수치를 인용한 학생이 고칠 수 없는 루프에 걸린다
+    #    (모델이 수치를 지워야 풀리는데, 지우면 근거가 사라진다 — 실측 2026-08-02).
+    #    앞뒤가 모두 숫자인 마침표는 문장 경계가 아니다.
+    return [s.strip() for s in re.split(r"(?<!\d)\.(?!\d)", text) if len(s.strip()) >= 2]
 
 
 def estimate_level(text, d):
@@ -234,6 +248,12 @@ def check_draft(text, max_bytes, forbidden, recommended=None, names=None, rubric
     # 후보만 지목. 실제 재구성(관절 분할+문두 접속 복원+명사형 다양화)은 재작성 LLM 몫(D3).
     est = None
     struct = list(sentence_metrics.advisory_lines(text))
+
+    # 백분율 — 하드 아님(위 SCORE_ADVISORY 주석 참조). Tier-2 확인거리로만 넘긴다.
+    for pat, label in SCORE_ADVISORY:
+        m = re.search(pat, text)
+        if m:
+            struct.append(f"성적표현?[{label}]: '{m.group().strip()}'")
 
     # ── 성취수준 다신호 추정(advisory. 하드 위반 아님, 헌법4/2) ──
     if recommended:

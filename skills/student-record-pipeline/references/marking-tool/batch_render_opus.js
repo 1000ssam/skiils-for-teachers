@@ -1,7 +1,7 @@
 export const meta = {
-  name: 'sonnet-render-compare',
-  description: '교사 마킹 + 레벨로 세특 렌더(격리 배치, 소넷 병렬)',
-  phases: [{ title: 'Sonnet렌더', detail: '학생별 병렬 렌더(sonnet)', model: 'sonnet' }],
+  name: 'opus-rerender',
+  description: '반려된 세특 재작성(격리 배치, 오퍼스 병렬)',
+  phases: [{ title: 'Opus재작성', detail: '반려건 병렬 재작성(opus)', model: 'opus' }],
 }
 /* @@ARGS-INJECTION-POINT@@ — build_run_batch.py 가 이 줄을 `const args = {…}` 로 바꿔
    out/_run_batch.js 를 만든다. 지우지 마라(마커가 없으면 빌더가 멈춘다).
@@ -30,7 +30,7 @@ const SCHEMA = {
   required: ['setuk', 'ledger', 'bytes_est', 'notes', 'unmet'],
 }
 
-phase('Sonnet렌더')
+phase('Opus재작성')
 const input = typeof args === 'string' ? JSON.parse(args) : args
 const CONTRACT = input?.contract
 const DRAFTS = input?.drafts_dir
@@ -154,7 +154,7 @@ ${surfaceBlock()}
 이름·역량·레벨은 넣지 마라 — 화면이 교사 마킹에서 직접 읽는다(네가 옮겨 적으면 어긋난다).
 
 StructuredOutput 도구로 {setuk, ledger:[{claim,span}], bytes_est, notes, unmet}을 반환하라.`
-  const r = await agent(prompt, { label: `sonnet:${s.name}`, phase: 'Sonnet렌더', model: 'sonnet', agentType: 'general-purpose', schema: SCHEMA })
+  const r = await agent(prompt, { label: `opus:${s.name}`, phase: 'Opus재작성', model: 'opus', agentType: 'general-purpose', schema: SCHEMA })
   // level·delegated 는 입력에서 그대로 붙인다 — 모델 에코를 믿지 않는다.
   const meta = { hakbun: s.hakbun, name: s.name, level: s.level || null, delegated: !s.highlights.length }
   if (!r) return { ...meta, error: true }
@@ -167,7 +167,7 @@ StructuredOutput 도구로 {setuk, ledger:[{claim,span}], bytes_est, notes, unme
 const reworks = students.filter(s => (s.rejects || []).length).length
 const delegated = students.filter(s => !s.highlights.length).length
 const extras = students.filter(s => (s.extra || '').trim()).length
-log(`소넷 렌더 완료: ${results.filter(Boolean).length}/${students.length}`
+log(`오퍼스 재작성 완료: ${results.filter(Boolean).length}/${students.length}`
   + `${delegated ? ` · 위임 ${delegated}명(검수 우선)` : ''}${reworks ? ` · 재렌더 ${reworks}명` : ''}`
   + `${extras ? ` · 기타 요구사항 ${extras}명` : ''}`)
 /* 상한 근처는 거의 항상 패딩이다(계약서 §2 실측 사고). 본문을 안 싣는 대신 이 신호는 올린다.

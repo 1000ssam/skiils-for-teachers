@@ -61,23 +61,23 @@ t('secTag("c") = "C"', G('secTag("c")') === 'C');
 console.log('\n[위임] 하이라이트 0개 = AI가 원문에서 직접 고름. 개수로만 갈린다');
 t('하이라이트 0개 → 위임', G('isDelegated("10401")') === true);
 G('STATE["10401"].done = true; paintStatus("10401")');
-t('배지에 위임 표시', badge().includes('위임'));
+t('배지에 AI가 골랐다고 표시', badge().includes('AI가 고름'));
 G('STATE["10401"].highlights.push({section:"a",text:"가나다",why:""}); paintStatus("10401")');
 t(`'왜'가 비어도 하이라이트가 있으면 위임 아님(부분 마킹=하드바인딩)`, G('isDelegated("10401")') === false);
-t('배지에서 위임 표시 사라짐', !badge().includes('위임'));
+t('배지에서 AI가 고름 표시 사라짐', !badge().includes('AI가 고름'));
 G('STATE["10401"].highlights = []; STATE["10401"].done = false; paintStatus("10401")');
 
-console.log('\n[배지 전이] 마킹중 → 굽는 중 → 초안 나옴 → 확정');
+console.log('\n[배지 전이] 마킹중 → 만드는 중 → 초안 나옴 → 확정');
 t('초기 = 마킹중', badge() === '마킹중');
 G('STATE["10401"].highlights.push({section:"a",text:"가나다",why:"핵심"})');
 G('save("10401", true)');
 G('STATE["10401"].done = true; paintStatus("10401")');
-t('요청했는데 초안 없음 = 굽는 중', badge() === '굽는 중');
+t('요청했는데 초안 없음 = 만드는 중', badge() === '만드는 중');
 // 초안 도착 = 파일이 생기고(DIDX) 서버 대기열에서 빠진 상태(PEND). 둘 다 서버가 알려준다.
 G('DIDX["10401"] = 123; PEND.delete("10401"); paintStatus("10401")');
 t('초안 도착 = 초안 나옴', badge() === '초안 나옴');
 G('PEND.add("10401"); paintStatus("10401")');
-t('초안이 있어도 대기열에 있으면 굽는 중(다시 그려질 것)', badge() === '굽는 중');
+t('초안이 있어도 대기열에 있으면 만드는 중(다시 만들 것)', badge() === '만드는 중');
 G('PEND.delete("10401"); paintStatus("10401")');
 G('setApproved("10401", true)');
 // 배지 문자열에서 이모지를 뺐다(2026-07-31 UI 재설계). 이모지는 OS·폰트마다 폭이 달라
@@ -89,7 +89,7 @@ t('approved=true 저장됨', S().approved === true && !!S().approved_at);
 console.log('\n[확정 자동 해제] 확정 후 재료가 바뀌면 유령 상태가 남지 않는가');
 G('STATE["10401"].highlights[0].why = "다른 이유"; save("10401", true)');
 t('왜 수정 → 확정 해제', S().approved === false && S().approved_at === null);
-t('배지도 되돌아감 — 재료가 바뀌었으니 다시 굽는다', badge() === '굽는 중');
+t('배지도 되돌아감 — 표시가 바뀌었으니 다시 만든다', badge() === '만드는 중');
 G('setApproved("10401", true)');
 G('STATE["10401"].level = "상"; save("10401", true)');
 t('레벨 변경 → 확정 해제', S().approved === false);
@@ -125,7 +125,7 @@ t('반려 즉시 대기열 진입', G('PEND.has("10401")') === true);
 t('rejects 1건 · 사유 보존', S().rejects.length === 1 && S().rejects[0].reason === '통설을 지어냄');
 t('반려 시 확정 해제', S().approved === false);
 t('반려 시 요청 상태 유지(done)', S().done === true);
-t('초안 캐시 폐기 → 굽는 중', badge() === '굽는 중');
+t('초안 캐시 폐기 → 만드는 중', badge() === '만드는 중');
 G('reject("10401", "")');
 t('사유 없는 반려도 누적(지우지 않음)', S().rejects.length === 2 && S().rejects[1].reason === '');
 
@@ -162,13 +162,13 @@ t('재료가 바뀌면 보류가 풀린다 — 그 초안은 이미 옛것이다
 console.log('\n[근거 라벨] 원문 근거가 없는 서술이 원문에서 온 것처럼 보이면 안 된다(계약서 §0-3)');
 const origin = (span, dele, hi) => G(`ledgerOrigin(${JSON.stringify(span)}, ${!!dele}, ${hi ?? -1})`);
 t('기타 요구사항 → 원문 근거 없음으로 표시',
-  origin('기타 요구사항: 발표도 적극적이었음').tag === '교사 요구사항(원문 근거 없음)');
+  origin('기타 요구사항: 발표도 적극적이었음').tag === '선생님이 알려주신 사실(학생 글에 없음)');
 t('접두사는 벗겨서 보여준다', origin('기타 요구사항: 발표도 적극적이었음').body === '발표도 적극적이었음');
 t('위임 학생이어도 기타 요구사항이 우선 — 원문에서 온 게 아니다',
-  origin('기타 요구사항: 발표도 적극적이었음', true).tag === '교사 요구사항(원문 근거 없음)');
-t('위임의 나머지 근거는 원문(AI 선택)', origin('김춘추: 한강 쪽으로', true).tag === '원문(AI 선택)');
-t('교사 지정(역량·왜)은 그대로 구분', origin('교사 지정 — 역량: 개인 서사').tag === '교사 지정');
-t('되짚기 성공한 근거는 하이라이트', origin('[1](p3) "가나다"', false, 0).tag === '하이라이트');
+  origin('기타 요구사항: 발표도 적극적이었음', true).tag === '선생님이 알려주신 사실(학생 글에 없음)');
+t('AI가 고른 학생의 나머지 근거는 학생 글에서', origin('김춘추: 한강 쪽으로', true).tag === '학생 글에서 AI가 고름');
+t('교사 지정(역량·왜)은 그대로 구분', origin('교사 지정 — 역량: 개인 서사').tag === '선생님이 정하신 것');
+t('되짚기 성공한 근거는 선생님이 표시한 대목', origin('[1](p3) "가나다"', false, 0).tag === '선생님이 표시한 대목');
 
 console.log('\n[저장 페이로드] 디스크에 실제로 나가는 모양');
 const last = SAVES[SAVES.length - 1];

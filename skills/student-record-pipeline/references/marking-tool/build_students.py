@@ -8,14 +8,29 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAP = os.path.join(ROOT, "out", "mapping_reconciled.csv")
 CLEAN = os.path.join(ROOT, "out", "clean")
 
-# 마킹 칸 스펙 — 화면(mark.html)이 이걸 읽어 칸을 그린다. 과제 형태가 바뀌면 여기만 고친다.
-#   key   = 명렬표 CSV 열 이름이자 학생 레코드의 필드명
-#   label = 칸 제목 · tag = 하이라이트 줄에 붙는 짧은 꼬리표 · tip = 칸 제목 옆 안내(선택)
+# 학생 활동지가 몇 칸으로 되어 있는지 — 화면(mark.html)이 이걸 읽어 칸을 그린다.
+#   key   = 명렬표 CSV 열 이름이자 학생 기록의 필드명
+#   label = 칸 제목 · tag = 표시한 줄에 붙는 짧은 꼬리표 · tip = 칸 제목 옆 안내(선택)
+#
+# 🔑 과제가 바뀌면 이 파일을 고치지 말고 **<project>/sections.json** 을 만든다.
+#    스크립트 상수를 손으로 고치게 하면 배치마다 스킬 원본이 오염되고, 다른 과제의
+#    칸 정의가 조용히 남아 있게 된다. 아래 값은 그 파일이 없을 때만 쓰는 예시다.
+SECTIONS_FILE = os.path.join(ROOT, "sections.json")
 SECTIONS = [
     {"key": "p3", "label": "p3 · 장면 설정 + 나의 생각", "tag": "장면·생각",
      "tip": "드래그하면 바로 형광펜, 다시 드래그로 추가"},
     {"key": "p4", "label": "p4 · 인물 간 대화", "tag": "대화"},
 ]
+if os.path.exists(SECTIONS_FILE):
+    with open(SECTIONS_FILE, encoding="utf-8") as f:
+        loaded = json.load(f)
+    loaded = loaded.get("sections", loaded) if isinstance(loaded, dict) else loaded
+    if not isinstance(loaded, list) or not loaded:
+        sys.exit(f"❌ {SECTIONS_FILE} 는 칸 목록이어야 합니다(빈 목록 불가).")
+    for sec in loaded:
+        if not isinstance(sec, dict) or not sec.get("key") or not sec.get("label"):
+            sys.exit(f"❌ {SECTIONS_FILE} 의 각 칸에는 key 와 label 이 있어야 합니다: {sec!r}")
+    SECTIONS = loaded
 
 def read_clean(rel):
     if not rel: return ""
@@ -47,7 +62,9 @@ def order_key(s):
     return (cls_key(s["cls"]), int(s["order"]) if s["order"].isdigit() else 0)
 
 rows = list(csv.DictReader(open(MAP, encoding="utf-8-sig")))
-arg1 = sys.argv[1] if len(sys.argv) > 1 else "5"
+# 기본값은 "all". 예전 기본값은 특정 반("5")이라 인자 없이 부르면 **0명 조립하고도**
+# "조립 완료"로 성공처럼 끝났다(실측 2026-08-03). 조용히 비는 기본값은 두지 않는다.
+arg1 = sys.argv[1] if len(sys.argv) > 1 else "all"
 out = os.path.join(ROOT, "tool", "students.json")
 
 if arg1 == "all":

@@ -36,6 +36,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # deep/ → references/
 from neis_bytes import neis_bytes  # 바이트는 단일 출처 — UTF-8 길이가 아니라 NEIS 규칙(비ASCII=3)
 
 # 이 밑으로 떨어지는 배정은 '근거로 안 친다'. 하한이 없으면 유사도가 0에 가까워도 어딘가엔 붙어,

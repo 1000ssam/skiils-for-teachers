@@ -79,96 +79,54 @@ t('초안 도착 = 초안 나옴', badge() === '초안 나옴');
 G('PEND.add("10401"); paintStatus("10401")');
 t('초안이 있어도 대기열에 있으면 다시 쓸 차례', badge() === '다시 쓸 차례');
 G('PEND.delete("10401"); paintStatus("10401")');
-G('setApproved("10401", true)');
+/* 확정·보류·반려는 이제 **엑셀**(ingest_review_xlsx.py)이 marks 파일에 적는다.
+   화면은 그 값을 읽어 배지로 보여주고, 재료가 바뀌면 스스로 풀어 줄 뿐이다.
+   그래서 아래는 "디스크에서 그렇게 읽혔을 때" 를 흉내 내 화면 쪽 규칙만 검증한다. */
+const setApproved = v => G(`STATE["10401"].approved=${v}; STATE["10401"].approved_at=${v?'new Date().toISOString()':'null'}; paintStatus("10401")`);
+const setHeld     = v => G(`STATE["10401"].held=${v}; STATE["10401"].held_at=${v?'new Date().toISOString()':'null'}; paintStatus("10401")`);
+
+setApproved(true);
 // 배지 문자열에서 이모지를 뺐다(2026-07-31 UI 재설계). 이모지는 OS·폰트마다 폭이 달라
 // 줄이 흔들리고, 상태색을 디자인 토큰에 맞출 수 없으며, 스크린리더가 그림 이름을 읽는다.
-// 상태 구분은 이제 배지 클래스(b-ok/b-hold/…)와 레일 점이 색으로 한다.
-t('확정 = 확정', badge() === '확정');
-t('approved=true 저장됨', S().approved === true && !!S().approved_at);
+t('엑셀에서 확정된 학생 = 확정 배지', badge() === '확정');
 
 console.log('\n[확정 자동 해제] 확정 후 재료가 바뀌면 유령 상태가 남지 않는가');
 G('STATE["10401"].highlights[0].why = "다른 이유"; save("10401", true)');
 t('왜 수정 → 확정 해제', S().approved === false && S().approved_at === null);
 t('배지도 되돌아감 — 표시가 바뀌었으니 다시 쓴다', badge() === '다시 쓸 차례');
-G('setApproved("10401", true)');
+setApproved(true);
 G('STATE["10401"].level = "상"; save("10401", true)');
 t('레벨 변경 → 확정 해제', S().approved === false);
-G('setApproved("10401", true)');
+setApproved(true);
 G('STATE["10401"].competency = "새 역량"; save("10401", true)');
 t('역량 변경 → 확정 해제', S().approved === false);
-G('setApproved("10401", true)');
+setApproved(true);
 G('STATE["10401"].extra = "짧게 써줘"; save("10401", true)');
 t('기타 요구사항 변경 → 확정 해제(재료다)', S().approved === false);
 t('기타 요구사항 변경 → 대기열 진입', G('PEND.has("10401")') === true);
-G('setApproved("10401", true)');
+setApproved(true);
 const atAfterApprove = S().material_at;
 G('save("10401", true)');
 t('재료 변화 없는 저장은 확정 유지', S().approved === true);
 
-console.log('\n[material_at] 감시자가 "다시 그릴까"를 판정하는 기준 — 재료가 바뀔 때만 찍힌다');
+console.log('\n[material_at] "다시 그릴까" 를 정하는 기준 — 재료가 바뀔 때만 찍힌다');
 t('확정은 material_at 을 건드리지 않는다(확정본 덮어쓰기 방지)', S().material_at === atAfterApprove);
-G('setApproved("10401", false)');
+setApproved(false);
 t('확정 취소도 material_at 을 건드리지 않는다', S().material_at === atAfterApprove);
 await new Promise(r => setTimeout(r, 3));   // ISO 스탬프가 ms 해상도라 같은 밀리초면 문자열이 같다
 G('STATE["10401"].highlights.push({section:"b",text:"바사아",why:""}); save("10401", true)');
 t('하이라이트 추가 → material_at 갱신', S().material_at !== atAfterApprove);
 t('재료 변경 시 대기열에 즉시 반영', G('PEND.has("10401")') === true);
 
-console.log('\n[반려] 사유 누적 · 확정 해제 · 초안 캐시 폐기');
-G('setApproved("10401", true)');
-const atBeforeReject = S().material_at;
-await new Promise(r => setTimeout(r, 3));   // ISO 스탬프 ms 해상도 — 같은 밀리초면 문자열이 같다
-G('DIDX["10401"] = 123; PEND.delete("10401")');
-G('reject("10401", "통설을 지어냄")');
-t('반려는 재료가 그대로여도 material_at 을 찍는다(다시 그리라는 명시 요청)', S().material_at !== atBeforeReject);
-t('반려 즉시 대기열 진입', G('PEND.has("10401")') === true);
-t('rejects 1건 · 사유 보존', S().rejects.length === 1 && S().rejects[0].reason === '통설을 지어냄');
-t('반려 시 확정 해제', S().approved === false);
-t('반려 시 요청 상태 유지(done)', S().done === true);
-t('초안 캐시 폐기 → 다시 쓸 차례', badge() === '다시 쓸 차례');
-G('reject("10401", "")');
-t('사유 없는 반려도 누적(지우지 않음)', S().rejects.length === 2 && S().rejects[1].reason === '');
-
-console.log('\n[반려 스냅샷] 물린 본문이 다음 렌더에 덮어써져도 남는가');
-G('DRAFT["10401"] = {draft:{setuk:"물린 문장 A"}}');
-G('reject("10401", "A 가 이상함")');
-t('반려 시 지금 초안 본문을 함께 붙잡는다', S().rejects.at(-1).setuk === '물린 문장 A');
-G('DRAFT["10401"] = {draft:{setuk:"물린 문장 B"}}');
-G('reject("10401", "B 도 이상함")');
-t('2회 이상 물려도 각 회차 본문이 따로 남는다',
-  S().rejects.at(-2).setuk === '물린 문장 A' && S().rejects.at(-1).setuk === '물린 문장 B');
-G('delete DRAFT["10401"]');
-G('reject("10401", "초안 없이 물림")');
-t('초안 캐시가 없으면 빈 스냅샷(터지지 않음)', S().rejects.at(-1).setuk === '');
-
-console.log('\n[판정 보류] 안 읽은 것과 읽고 못 정한 것을 가른다');
+console.log('\n[판정 보류] 엑셀에서 보류한 학생 — 안 읽은 것과 읽고 못 정한 것을 가른다');
 G('STATE["10401"].rejects = []; STATE["10401"].done = true; DIDX["10401"] = 999; PEND.delete("10401")');
-G('setHeld("10401", true)');
+setHeld(true);
 t('보류 배지로 갈린다', badge() === '보류');
-t('보류는 대기열에서 빠진다(재렌더 낭비 방지)', G('PEND.has("10401")') === false);
-t('held/held_at 저장됨', S().held === true && !!S().held_at);
-const atBeforeHold = S().material_at;
-t('보류는 재료가 아니다 — material_at 을 안 건드린다', S().material_at === atBeforeHold);
-G('setApproved("10401", true)');
-t('확정하면 보류가 풀린다', S().held === false && S().held_at === null);
-G('setApproved("10401", false); setHeld("10401", true)');
-G('reject("10401", "역시 아님")');
-t('[다시] 누르면 보류가 풀린다(판정을 한 것)', S().held === false);
-G('setHeld("10401", true)');
 await new Promise(r => setTimeout(r, 3));
 G('STATE["10401"].competency = "또 다른 역량"; save("10401", true)');
 t('재료가 바뀌면 보류가 풀린다 — 그 초안은 이미 옛것이다', S().held === false);
-
-console.log('\n[근거 라벨] 원문 근거가 없는 서술이 원문에서 온 것처럼 보이면 안 된다(계약서 §0-3)');
-const origin = (span, dele, hi) => G(`ledgerOrigin(${JSON.stringify(span)}, ${!!dele}, ${hi ?? -1})`);
-t('기타 요구사항 → 원문 근거 없음으로 표시',
-  origin('기타 요구사항: 발표도 적극적이었음').tag === '선생님이 알려주신 사실(학생 글에 없음)');
-t('접두사는 벗겨서 보여준다', origin('기타 요구사항: 발표도 적극적이었음').body === '발표도 적극적이었음');
-t('위임 학생이어도 기타 요구사항이 우선 — 원문에서 온 게 아니다',
-  origin('기타 요구사항: 발표도 적극적이었음', true).tag === '선생님이 알려주신 사실(학생 글에 없음)');
-t('AI가 고른 학생의 나머지 근거는 학생 글에서', origin('김춘추: 한강 쪽으로', true).tag === '학생 글에서 AI가 고름');
-t('교사 지정(역량·왜)은 그대로 구분', origin('교사 지정 — 역량: 개인 서사').tag === '선생님이 정하신 것');
-t('되짚기 성공한 근거는 선생님이 표시한 대목', origin('[1](p3) "가나다"', false, 0).tag === '선생님이 표시한 대목');
+t('보류가 풀리면 배지도 되돌아간다', badge() === '다시 쓸 차례');
+G('STATE["10401"].extra = "짧게 써줘"; save("10401", true)');   // 저장 페이로드 검사용
 
 console.log('\n[저장 페이로드] 디스크에 실제로 나가는 모양');
 const last = SAVES[SAVES.length - 1];

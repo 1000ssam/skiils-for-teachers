@@ -31,10 +31,10 @@ BOOK = re.compile(r"'([^']{2,40})\(([^)]{2,20})\)'")
 
 # 칸 너비 — '확인할 것' 이 가장 길어서 행 높이를 혼자 결정한다. 그래서 제일 넓게 준다.
 COLS = [
-    ("학번", 9), ("이름", 10), ("다시", 7), ("왜 다시 쓰나요", 30), ("세특", 58),
+    ("학번", 9), ("이름", 10), ("판정", 9), ("왜 다시 쓰나요", 30), ("세특", 58),
     ("선생님이 표시한 대목", 25), ("선생님이 정하신 것", 25), ("확인할 것", 60),
 ]
-# '다시'·'왜 다시 쓰나요' 는 선생님이 채우는 칸이다(나머지는 읽는 칸).
+# '판정'·'왜 다시 쓰나요' 는 선생님이 채우는 칸이다(나머지는 읽는 칸).
 # 학번·이름과 함께 틀고정 안에 둬서 오른쪽 칸을 읽는 동안에도 계속 보이게 한다.
 # 채우신 뒤  python3 tool/ingest_review_xlsx.py  로 되먹이면 그 사유가 다음 초안에 실린다.
 JUDGE_COLS = (3, 4)
@@ -77,7 +77,7 @@ def prior_judgement(mark):
     if not mark:
         return "", ""
     if mark.get("approved"):
-        return "확정", ""
+        return "통과", ""
     if mark.get("held"):
         return "보류", ""
     return "", ""
@@ -162,7 +162,7 @@ def main():
     # 본문 행 높이는 정하지 않는다 — 엑셀이 글자량에 맞춰 스스로 잡게 둔다.
     # 계산해서 박아 본 적 있는데(글자 수 ÷ 칸 너비), 가장 긴 칸에 맞춰지는 건 똑같으면서
     # 짧은 학생은 절반이 빈칸이 됐다. 실물 비교 끝에 자동이 낫다고 판정(2026-08-02).
-    ws.freeze_panes = "E2"      # 학번·이름·다시·왜 는 항상 보이게
+    ws.freeze_panes = "E2"      # 학번·이름·판정·왜 는 항상 보이게
 
     n_fail = n_deleg = 0
     for r, (hb, rec) in enumerate(data.items(), start=2):
@@ -190,12 +190,12 @@ def main():
         for i in JUDGE_COLS:                    # 선생님이 채우실 칸은 잠그지 않고 눈에 띄게 둔다
             ws.cell(row=r, column=i).fill = JUDGE_FILL
 
-    # '다시' 칸은 골라 넣게 한다 — 손으로 적으면 표기가 갈려(다시/재작성/X/O) 되먹일 때 못 읽는다.
+    # '판정' 칸은 골라 넣게 한다 — 손으로 적으면 표기가 갈려(다시/재작성/X/O) 되먹일 때 못 읽는다.
     last = len(data) + 1
     if last >= 2:
-        dv = DataValidation(type="list", formula1='"다시,확정,보류"', allow_blank=True,
+        dv = DataValidation(type="list", formula1='"통과,재작성,보류"', allow_blank=True,
                             showDropDown=False)
-        dv.error = "다시 · 확정 · 보류 중에서 고르세요. 비워 두시면 아직 안 정하신 것으로 봅니다."
+        dv.error = "통과 · 재작성 · 보류 중에서 고르세요. 비워 두시면 아직 안 정하신 것으로 봅니다."
         dv.prompt = "이 세특을 어떻게 할까요? 비워 두면 '아직 안 정함'입니다."
         ws.add_data_validation(dv)
         dv.add(f"C2:C{last}")

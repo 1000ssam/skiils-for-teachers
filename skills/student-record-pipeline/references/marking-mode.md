@@ -21,7 +21,7 @@
 | `render_args.py` | 렌더 입력 조립(결정론) + 위험 신호 stderr 표면화 |
 | `batch_render_sonnet.js` | 렌더 워크플로. 계약서 경로가 없으면 추측하지 않고 멈춘다 |
 | `build_students.py` | 명렬표 → `students.json`. 상단 `SECTIONS` 상수 = 활동지 칸 정의 |
-| `validate_draft.py` | 표면 검증(바이트·종결·금지어·동어반복). 주제어 면제는 프로젝트가 공급 |
+| `gate.py` | 표면 검사 단일 출처(바이트·종결·못 쓰는 말·동어반복·특수기호). 주제어 면제는 프로젝트가 공급 |
 | `test_mark_ui.mjs` · `test_pending.py` | **회귀 65검사.** 툴을 손댔으면 반드시 돌린다 |
 
 설치·기동 순서는 `SKILL.md` Step 5. 계약서는 `references/render-contract.template.md` 를 복사해

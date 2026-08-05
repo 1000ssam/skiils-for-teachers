@@ -11,3 +11,6 @@ Thumbs.db
 *.swp
 *~
 **/google-client.json
+__pycache__/
+*.pyc
+.pytest_cache/

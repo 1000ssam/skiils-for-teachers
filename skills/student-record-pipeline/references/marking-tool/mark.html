@@ -5,7 +5,7 @@
 /* ═══ 디자인 토큰 ═════════════════════════════════════════════════════════════
    2단 구성: 원색(--p-*) → 시맨틱(--surface/text/border/accent/st-*).
    컴포넌트 CSS는 **시맨틱만** 참조한다. 색을 컴포넌트에 직접 박지 않는 이유:
-   상태색(만드는 중·초안·확정·보류)이 화면 세 곳(레일 점 · 배지 · 배너)에 동시에 나타나
+   상태색(쓸 차례·초안·확정·보류)이 화면 세 곳(레일 점 · 배지 · 배너)에 동시에 나타나
    한 곳만 고치면 반드시 어긋나기 때문이다. 상태 = 토큰 한 줄이 단일 출처다. */
 :root{
   /* 원색 — 여기서만 실제 색값을 쓴다 */
@@ -176,7 +176,7 @@ kbd{font:inherit;font-size:var(--fs-xs);font-weight:600;background:var(--surface
 .ri-hb{margin-left:auto;font-size:var(--fs-xs);color:var(--text-faint);font-variant-numeric:tabular-nums}
 .ri-rj{font-size:var(--fs-xs);font-weight:700;color:var(--st-danger-fg);background:var(--st-danger-bg);
   border-radius:var(--r-pill);padding:0 5px}
-/* 진행 점 — ○미작업 ◐만드는 중 ●초안 ●확정 ⏸보류. 글자 대신 형태·색으로만 구분한다. */
+/* 진행 점 — ○미작업 ◐쓸 차례 ●초안 ●확정 ⏸보류. 글자 대신 형태·색으로만 구분한다. */
 .dot{width:9px;height:9px;border-radius:50%;flex:none;border:1.5px solid var(--st-none-bd);background:var(--st-none-bg)}
 .dot--bake{border-color:var(--st-bake-bd);background:var(--st-bake-bg);
   box-shadow:inset 0 -5px 0 var(--st-bake-fg);animation:bake 1.6s ease-in-out infinite}
@@ -461,7 +461,16 @@ const PEND = new Set();         // 지금 대기열(= 다시 그려질 학생). 
 const DRAFT = {};               // 학번 -> /draft 응답 캐시
 const SIG = {};                 // 학번 -> 재료 지문(확정 자동 해제 판정용)
 const capsSet = new Set();
+let CTX = {};                   // out/marks/_context.json 통째(활동 맥락 + 사전 인터뷰에서 온 예시)
+let CAP_HINTS = [];             // 역량 칸 예시 — 과목·과제마다 달라야 하므로 화면에 박지 않는다
 const POLL_MS = 2500;
+
+/* 역량 칸에 뜰 예시. **여기에 문장을 박아 두면 안 된다** — 과제가 바뀌면 엉뚱한 예시가
+   선생님 눈에 먼저 들어오고, 그게 그대로 답을 끌고 간다. 사전 인터뷰에서 파악한 과제
+   성격을 `_context.json` 의 `competency_examples` 에 적어 두면 그게 예시로 뜨고,
+   고르실 수 있게 아래 목록에도 들어간다. 없으면 과목 색이 없는 문구로 둔다. */
+const capPlaceholder = () =>
+  CAP_HINTS.length ? `예: ${CAP_HINTS[0]}` : '이 학생이 무엇에 도달했는지 한 줄로';
 
 /* 아이콘 — 이모지를 쓰지 않는다.
    이모지는 OS·폰트마다 모양과 폭이 달라 줄이 흔들리고, 색을 상태 토큰에 맞출 수 없으며,
@@ -605,9 +614,11 @@ function paintReq(hakbun){
 }
 
 /* ── 진행 상태 ─────────────────────────────────────────────────────────────
-   표시중 → (초안 요청) 만드는 중 → 초안 나옴 → 확정.
-   '만드는 중'은 요청했는데 아직 안 나온 구간이다. 이걸 '마킹중'에 합치면
-   172명 훑을 때 "요청했는데 감시자가 안 떠 있음"을 못 알아챈다. */
+   마킹중 → [마킹 끝] → 쓸 차례 → 초안 나옴 → 확정.
+   '쓸 차례'는 표시는 끝났는데 아직 안 쓴 구간이다. 이걸 '마킹중'에 합치면 한 반을
+   훑을 때 "표시 다 했는데 아직 안 부른 사람"을 못 알아챈다.
+   🚨 예전엔 이 자리를 '만드는 중'이라고 했는데 **거짓말이다** — 지켜보는 창을 걷어낸
+   뒤로는 아무도 만들고 있지 않다. 선생님이 부르셔야 그때 쓴다(2026-08-05 실사용 지적). */
 // 위임 = 하이라이트 0개. 개수로만 가른다 — '부실해 보이면' 류의 판단을 넣지 않는다(하드바인딩이 샌다).
 const isDelegated = hakbun => (STATE[hakbun].highlights || []).length === 0;
 
@@ -635,8 +646,9 @@ function statusOf(hakbun){
   // — 승인을 없앴을 때 생기는 구멍과 정확히 같은 종류다. 재렌더는 하지 않는다(pending.py).
   if(s.held) return {k:'hold', t:'보류'+d};
   // 대기열에 있으면 지금 보이는 초안은 다시 그려질 것 — '초안 나옴'이라고 하면 안 된다.
-  return (DIDX[hakbun] && !PEND.has(hakbun))
-    ? {k:'draft', t:'초안 나옴'+d} : {k:'bake', t:'만드는 중'+d};
+  if(DIDX[hakbun] && !PEND.has(hakbun)) return {k:'draft', t:'초안 나옴'+d};
+  // 초안이 이미 있는데 그 뒤로 표시가 바뀌었으면 '다시' 쓸 차례다 — 둘을 갈라 적는다.
+  return {k:'bake', t:(DIDX[hakbun] ? '다시 쓸 차례' : '쓸 차례')+d};
 }
 
 /* 상태를 화면 두 곳에 동시에 칠한다: 작업영역 배지 + 레일 점.
@@ -718,8 +730,8 @@ function buildCard(s){
       <div class="cbody">
         <div class="fld">
           <label for="cap-${hakbun}">관측되는 역량 <span class="sub">— 무엇에 도달했나</span></label>
-          <input id="cap-${hakbun}" list="caps" placeholder="예: 역사적 사건을 개인의 시선으로 재구성하는 역량"
-                 title="${esc(st.competency||'')}" value="${esc(st.competency||'')}">
+          <input id="cap-${hakbun}" list="caps" placeholder="${esc(capPlaceholder())}"
+                 title="${esc(st.competency||capPlaceholder())}" value="${esc(st.competency||'')}">
         </div>
         <div class="fld">
           <label>도달 <span class="sub">— 마지막 '이를 통해 …' 문장을 어디까지 쓸지</span></label>
@@ -1108,7 +1120,7 @@ function updateCounts(){
   }
   const t=$('#total');
   if(t) t.innerHTML = list.length
-    ? `<span>만드는 중 <b>${bake}</b></span><span>초안 <b>${draft}</b></span>${hold?`<span>보류 <b>${hold}</b></span>`:''}<span>확정 <b>${ok}</b> / ${list.length}</span>`
+    ? `<span>쓸 차례 <b>${bake}</b></span><span>초안 <b>${draft}</b></span>${hold?`<span>보류 <b>${hold}</b></span>`:''}<span>확정 <b>${ok}</b> / ${list.length}</span>`
     : '';
   const pt=$('#progtxt'); if(pt) pt.innerHTML=`<span>${esc(CUR||'')} 진행</span><b>${ok} / ${list.length}</b>`;
   const pb=$('#progbar'); if(pb) pb.style.width=(list.length?ok/list.length*100:0)+'%';
@@ -1192,6 +1204,10 @@ async function init(){
   try{ const ix=await (await fetch('/drafts-index')).json();
        DIDX=ix.drafts||{}; (ix.pending||[]).forEach(hk=>PEND.add(hk)); }catch{}
   const ctx=await (await fetch('/context')).json();
+  CTX = ctx || {};
+  CAP_HINTS = (Array.isArray(CTX.competency_examples) ? CTX.competency_examples : [])
+    .map(c=>String(c||'').trim()).filter(Boolean);
+  if(CAP_HINTS.length){ CAP_HINTS.forEach(c=>capsSet.add(c)); refreshCaps(); }
   const ctxEl=$('#ctx');
   if(ctxEl){
     ctxEl.value=ctx.context||'';
@@ -1201,8 +1217,11 @@ async function init(){
     const paintCtx=()=>{ if(box) box.classList.toggle('is-empty', !ctxEl.value.trim()); };
     paintCtx();
     ctxEl.addEventListener('input',()=>{ paintCtx(); });
+    /* 🚨 통째로 덮어쓰지 않는다. `{context:…}` 만 보내면 사전 인터뷰에서 적어 둔
+       `competency_examples` 가 **활동 맥락을 한 글자 고치는 순간 조용히 사라진다.** */
     ctxEl.addEventListener('input',debounce(()=>fetch('/context',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({context:ctxEl.value})}),400));
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...CTX, context:ctxEl.value})}),400));
   }
   const data=await (await fetch('/students.json')).json();
   STUDENTS=data.students||[];

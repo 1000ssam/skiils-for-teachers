@@ -54,8 +54,34 @@ def size_label(nb, byte_max):
     return f"{nb}바이트(한글 약 {as_chars(nb)}자) / 최대 {byte_max}바이트(약 {as_chars(byte_max)}자)"
 
 
-def check_text(txt, rules):
-    """세특 한 편을 검사한다. (고쳐야 할 것[], 봐두실 것[]) 을 돌려준다."""
+# 동어반복 화이트리스트 — 어느 과목에서나 반복돼도 자연스러운 범용 구조어.
+# 🚨 과목 주제어를 여기 박지 마라(과목마다 다르다). 주제어는 프로젝트의 repeat-whitelist.txt 가 준다.
+WHITELIST_BASE = {"역량", "인식", "개인", "국가", "서사", "담론", "역사", "상상", "주류",
+                  "자료", "서술", "문장", "학생", "활동", "내용", "생각", "부분", "사실"}
+JOSA = (r"(으로써|으로|이라는|라는|에서|에게|께서|처럼|만큼|보다|부터|까지|마다|이나|하고"
+        r"|와|과|을|를|이|가|은|는|의|에|로|도|만|께|나)$")
+
+
+def repeat_stems(txt, rules):
+    """같은 낱말이 조사만 바꿔 2회 이상 나오는지. ['위업×2', …] 을 돌려준다(경고용)."""
+    from collections import Counter
+    allow = WHITELIST_BASE | set(rules.get("repeat_whitelist") or [])
+    stems = []
+    for w in re.findall(r"[가-힣]{2,}", txt):
+        t = re.sub(JOSA, "", w)
+        t = re.sub(r"들$", "", t) or t          # 복수접미사 '들' 제거(백성들→백성)
+        if len(t) >= 2 and t not in allow:
+            stems.append(t)
+    return [f"{w}×{c}" for w, c in sorted(Counter(stems).items(), key=lambda x: -x[1]) if c >= 2]
+
+
+def check_text(txt, rules, name=""):
+    """세특 한 편을 검사한다. (고쳐야 할 것[], 봐두실 것[]) 을 돌려준다.
+
+    🔑 **규칙은 여기 한 곳에만 둔다.** 화면(validate_draft.py)·검수 엑셀(make_review_xlsx.py)이
+    전부 이 함수를 부른다. 예전엔 화면이 자기 검사기를 따로 갖고 있어서, 같은 원고를 두고
+    화면은 '통과' 검사는 '하드 실패'라고 답하는 일이 있었다(2026-08-06 실사용 지적).
+    """
     hard, soft = [], []
     byte_max = rules.get("byte_max", 1500)
     byte_short = rules.get("byte_short", 0)
@@ -125,6 +151,14 @@ def check_text(txt, rules):
             hard.append(("문장 끝맺음", f"'-함' '-임' 같은 형태로 끝나야 합니다: …{s[-18:]}"))
             break
 
+    # 아래 셋은 예전에 화면 검사기에만 있던 것 — 규칙을 한 곳으로 모으며 옮겨 왔다.
+    if re.search(r'[\u201c\u201d\u2018\u2019"\']{1}.{2,}[\u201c\u201d\u2018\u2019"\']{1}', txt):
+        soft.append(("인용부호", "직접 인용부호 흔적이 있습니다 — 인용은 쓰지 않기로 했습니다"))
+    if name and name in txt:
+        soft.append(("본인 이름", f"'{name}' 이 문장에 들어 있습니다 — 세특에 학생 이름은 넣지 않습니다"))
+    for r in repeat_stems(txt, rules):
+        soft.append(("반복되는 말", f"{r} — 같은 말이 되풀이됩니다"))
+
     return hard, soft
 
 
@@ -174,6 +208,12 @@ def load_rules(path):
         r = {k: v for k, v in json.load(open(path, encoding="utf-8")).items()
              if not k.startswith("_")}
     r["giwan"] = load_giwan()          # 배치 설정과 무관하게 항상 붙는다
+    # 동어반복 면제 주제어 — 과목마다 다르므로 프로젝트가 공급한다(없으면 빈 목록).
+    wl = os.path.join(os.path.dirname(os.path.abspath(path)) or ".", "repeat-whitelist.txt")
+    if os.path.exists(wl):
+        with open(wl, encoding="utf-8") as f:
+            r["repeat_whitelist"] = [ln.strip() for ln in f
+                                     if ln.strip() and not ln.startswith("#")]
     return r
 
 

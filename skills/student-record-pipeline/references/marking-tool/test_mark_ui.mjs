@@ -67,17 +67,17 @@ t(`'왜'가 비어도 하이라이트가 있으면 위임 아님(부분 마킹=�
 t('배지에서 AI가 고름 표시 사라짐', !badge().includes('AI가 고름'));
 G('STATE["10401"].highlights = []; STATE["10401"].done = false; paintStatus("10401")');
 
-console.log('\n[배지 전이] 마킹중 → 만드는 중 → 초안 나옴 → 확정');
+console.log('\n[배지 전이] 마킹중 → 쓸 차례 → 초안 나옴 → 확정');
 t('초기 = 마킹중', badge() === '마킹중');
 G('STATE["10401"].highlights.push({section:"a",text:"가나다",why:"핵심"})');
 G('save("10401", true)');
 G('STATE["10401"].done = true; paintStatus("10401")');
-t('요청했는데 초안 없음 = 만드는 중', badge() === '만드는 중');
+t('표시 끝났는데 초안 없음 = 쓸 차례', badge() === '쓸 차례');
 // 초안 도착 = 파일이 생기고(DIDX) 서버 대기열에서 빠진 상태(PEND). 둘 다 서버가 알려준다.
 G('DIDX["10401"] = 123; PEND.delete("10401"); paintStatus("10401")');
 t('초안 도착 = 초안 나옴', badge() === '초안 나옴');
 G('PEND.add("10401"); paintStatus("10401")');
-t('초안이 있어도 대기열에 있으면 만드는 중(다시 만들 것)', badge() === '만드는 중');
+t('초안이 있어도 대기열에 있으면 다시 쓸 차례', badge() === '다시 쓸 차례');
 G('PEND.delete("10401"); paintStatus("10401")');
 G('setApproved("10401", true)');
 // 배지 문자열에서 이모지를 뺐다(2026-07-31 UI 재설계). 이모지는 OS·폰트마다 폭이 달라
@@ -89,7 +89,7 @@ t('approved=true 저장됨', S().approved === true && !!S().approved_at);
 console.log('\n[확정 자동 해제] 확정 후 재료가 바뀌면 유령 상태가 남지 않는가');
 G('STATE["10401"].highlights[0].why = "다른 이유"; save("10401", true)');
 t('왜 수정 → 확정 해제', S().approved === false && S().approved_at === null);
-t('배지도 되돌아감 — 표시가 바뀌었으니 다시 만든다', badge() === '만드는 중');
+t('배지도 되돌아감 — 표시가 바뀌었으니 다시 쓴다', badge() === '다시 쓸 차례');
 G('setApproved("10401", true)');
 G('STATE["10401"].level = "상"; save("10401", true)');
 t('레벨 변경 → 확정 해제', S().approved === false);
@@ -125,7 +125,7 @@ t('반려 즉시 대기열 진입', G('PEND.has("10401")') === true);
 t('rejects 1건 · 사유 보존', S().rejects.length === 1 && S().rejects[0].reason === '통설을 지어냄');
 t('반려 시 확정 해제', S().approved === false);
 t('반려 시 요청 상태 유지(done)', S().done === true);
-t('초안 캐시 폐기 → 만드는 중', badge() === '만드는 중');
+t('초안 캐시 폐기 → 다시 쓸 차례', badge() === '다시 쓸 차례');
 G('reject("10401", "")');
 t('사유 없는 반려도 누적(지우지 않음)', S().rejects.length === 2 && S().rejects[1].reason === '');
 

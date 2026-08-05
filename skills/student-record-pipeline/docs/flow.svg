@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 742" width="840" height="742" role="img" aria-label="세특 파이프라인 흐름도: 사전 인터뷰, 글 읽어들이기, 형광펜 표시, 세특 만들기, 자동 검사, 검수 엑셀, 나이스 기입 순서로 진행되며 재작성은 세특 만들기로 되돌아간다">
+  <title>세특 파이프라인 흐름</title>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8A9099"/>
+    </marker>
+    <marker id="ar-loop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C2872B"/>
+    </marker>
+    <marker id="ar-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2F7D4F"/>
+    </marker>
+    <style>
+      .bg   { fill:#FBFCFD; stroke:#DDE1E6; }
+      .t    { font-family: Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', system-ui, sans-serif; }
+      .ttl  { font-size:15.5px; font-weight:700; fill:#1A1E23; }
+      .sub  { font-size:12.5px; fill:#5C636C; }
+      .mono { font-size:11.5px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; fill:#6B7280; }
+      .cap  { font-size:11.5px; font-weight:700; letter-spacing:.04em; }
+      .lane { font-size:12px; font-weight:700; }
+      .edge { stroke:#8A9099; stroke-width:1.6; fill:none; }
+    </style>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="839" height="741" rx="14" class="bg"/>
+
+  <!-- 머리말 -->
+  <g class="t">
+    <text x="34" y="42" class="ttl" style="font-size:18px">세특 파이프라인 — 무엇이 어떤 순서로 도는가</text>
+    <text x="34" y="64" class="sub">선생님이 하시는 일은 <tspan style="font-weight:700; fill:#1A1E23">③ 형광펜 표시</tspan>와 <tspan style="font-weight:700; fill:#1A1E23">⑥ 검수 엑셀 판정</tspan> 둘뿐입니다.</text>
+  </g>
+
+  <!-- 범례 -->
+  <g class="t" transform="translate(34,86)">
+    <rect x="0" y="0" width="11" height="11" rx="3" fill="#FDF0D5" stroke="#E0AE55"/>
+    <text x="18" y="10" class="sub">선생님</text>
+    <rect x="76" y="0" width="11" height="11" rx="3" fill="#EAF1FC" stroke="#7CA2E4"/>
+    <text x="94" y="10" class="sub">에이전트(AI)</text>
+    <rect x="186" y="0" width="11" height="11" rx="3" fill="#F1F3F5" stroke="#B6BCC4"/>
+    <text x="204" y="10" class="sub">스크립트 — 사람 손 안 탐</text>
+  </g>
+
+  <g class="t">
+    <!-- ① 사전 인터뷰 -->
+    <rect x="150" y="118" width="530" height="66" rx="9" fill="#EAF1FC" stroke="#7CA2E4"/>
+    <text x="60" y="157" class="lane" fill="#3B6BC4">에이전트</text>
+    <text x="170" y="145" class="ttl">① 사전 인터뷰</text>
+    <text x="170" y="167" class="sub">과제 · 루브릭 · 이 과제로 진짜 보시려던 것을 받아 적는다</text>
+
+    <path d="M415,184 L415,208" class="edge" marker-end="url(#ar)"/>
+
+    <!-- ② 읽어들이기 + 매핑 -->
+    <rect x="150" y="210" width="530" height="66" rx="9" fill="#F1F3F5" stroke="#B6BCC4"/>
+    <text x="60" y="249" class="lane" fill="#6B7280">스크립트</text>
+    <text x="170" y="237" class="ttl">② 학생 글 읽어들이기 → 누구 글인지 맞추기</text>
+    <text x="170" y="259" class="mono">map_pages.py — 파일 순서·이름·학번 셋을 대조. 어긋나면 멈추고 여쭙는다</text>
+
+    <path d="M415,276 L415,300" class="edge" marker-end="url(#ar)"/>
+
+    <!-- ③ 형광펜 -->
+    <rect x="150" y="302" width="530" height="66" rx="9" fill="#FDF0D5" stroke="#E0AE55"/>
+    <text x="60" y="341" class="lane" fill="#B07A1E">선생님</text>
+    <text x="170" y="329" class="ttl">③ 형광펜으로 표시 → [마킹 끝]</text>
+    <text x="170" y="351" class="sub">의미 있는 대목을 칠하고 ‘왜’를 적는다. 다 하신 뒤 <tspan style="font-weight:700;fill:#1A1E23">한 번만</tspan> 부르시면 된다</text>
+
+    <path d="M415,368 L415,392" class="edge" marker-end="url(#ar)"/>
+
+    <!-- ④ 작성 -->
+    <rect x="150" y="394" width="530" height="66" rx="9" fill="#EAF1FC" stroke="#7CA2E4"/>
+    <text x="60" y="433" class="lane" fill="#3B6BC4">에이전트</text>
+    <text x="170" y="421" class="ttl">④ 세특 만들기 — 표시한 것만으로</text>
+    <text x="170" y="443" class="sub">학생마다 따로 쓴다(Sonnet 병렬). 이미 쓴 사람은 다시 쓰지 않는다</text>
+
+    <path d="M415,460 L415,484" class="edge" marker-end="url(#ar)"/>
+
+    <!-- ⑤ 검사 -->
+    <rect x="150" y="486" width="530" height="66" rx="9" fill="#F1F3F5" stroke="#B6BCC4"/>
+    <text x="60" y="525" class="lane" fill="#6B7280">스크립트</text>
+    <text x="170" y="513" class="ttl">⑤ 자동 검사</text>
+    <text x="170" y="535" class="mono">gate.py — 길이 · 못 쓰는 말 · 점수 표기 · 가운뎃점 · 문장 끝맺음</text>
+
+    <path d="M415,552 L415,576" class="edge" marker-end="url(#ar)"/>
+
+    <!-- ⑥ 검수 -->
+    <rect x="150" y="578" width="530" height="66" rx="9" fill="#FDF0D5" stroke="#E0AE55"/>
+    <text x="60" y="617" class="lane" fill="#B07A1E">선생님</text>
+    <text x="170" y="605" class="ttl">⑥ 검수 엑셀에서 판정</text>
+    <text x="170" y="627" class="sub">out/검수.xlsx 의 ‘판정’ 칸 — <tspan style="font-weight:700;fill:#2F7D4F">통과</tspan> / <tspan style="font-weight:700;fill:#C2872B">재작성</tspan> / 보류</text>
+
+    <!-- 재작성 되돌이 — 오른쪽 바깥으로 돌아 ④ 로 -->
+    <path d="M680,611 L744,611 L744,427 L680,427" fill="none" stroke="#C2872B" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar-loop)"/>
+    <rect x="712" y="500" width="64" height="38" rx="6" fill="#FDF0D5" stroke="#E0AE55"/>
+    <text x="744" y="516" class="cap" fill="#B07A1E" text-anchor="middle">재작성</text>
+    <text x="744" y="531" class="sub" style="font-size:10.5px" text-anchor="middle">까닭째로</text>
+
+    <!-- 통과 → 나이스 기입 -->
+    <path d="M415,644 L415,668" class="edge" stroke="#2F7D4F" marker-end="url(#ar-ok)"/>
+    <text x="425" y="662" class="cap" fill="#2F7D4F">통과</text>
+    <rect x="150" y="670" width="530" height="54" rx="9" fill="#EAF5EC" stroke="#8FBF9F"/>
+    <text x="60" y="702" class="lane" fill="#2F7D4F">마무리</text>
+    <text x="170" y="692" class="ttl">나이스에 기입</text>
+    <text x="170" y="712" class="mono">neis_writeback.py — 반·번호와 성명이 둘 다 맞을 때만 쓴다</text>
+  </g>
+</svg>

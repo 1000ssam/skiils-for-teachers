@@ -91,4 +91,11 @@ irm https://raw.githubusercontent.com/1000ssam/skills-for-teachers/main/install.
 
 ## 라이선스
 
-MIT License
+MIT License — 저작권자 1000쌤(@iooo_tttt). 전문은 [`LICENSE`](LICENSE).
+
+**함께 실린 남의 것**은 [`LICENSES/`](LICENSES) 에 각각의 고지를 둡니다.
+
+| 파일 | 출처 | 라이선스 |
+|---|---|---|
+| `skills/student-record-pipeline/references/achievement-standards-2022.csv` | [gepai-mcp](https://github.com/pblsketch/gepai-mcp) | [MIT](LICENSES/gepai-mcp-MIT.txt) |
+| `skills/ppt-grid-deck` 의 디자인 룩 | [Design Diversity](https://github.com/epoko77-ai/design-diversity) | MIT (각 룩 항목에 출처 기록) |

@@ -234,4 +234,19 @@ student-record-pipeline/
 
 ## 라이선스
 
-MIT License
+이 스킬의 자작물(코드·문서·마킹 화면·그림) — **MIT** (리포 루트 [`LICENSE`](../../LICENSE)).
+
+**함께 실린 남의 것**
+
+- `references/achievement-standards-2022.csv` — 2022 개정 교육과정 성취기준 3,285건.
+  내용 자체는 **교육부 고시**라 저작권 보호 대상이 아닙니다(저작권법 제7조 제2호).
+  다만 이 파일은 [gepai-mcp](https://github.com/pblsketch/gepai-mcp)(MIT)의
+  `data/source/achievement-standards.csv` 를 **손대지 않고 그대로** 가져온 것이라,
+  그쪽 고지를 [`LICENSES/gepai-mcp-MIT.txt`](../../LICENSES/gepai-mcp-MIT.txt) 에 함께 싣습니다.
+- `references/giwan-2026-grounding.md` — 2026학년도 학교생활기록부 기재요령에서 세특 관련 대목을
+  **쪽수와 함께 발췌**한 것입니다. 근거 훈령은 저작권 대상이 아니고(제7조 제2호), 기재요령 책자는
+  국가가 업무상 작성·공표한 **공공저작물**(제24조의2)입니다. 파일 첫머리에 원문 내려받는 곳을 적어 뒀습니다.
+
+**학생 자료는 들어 있지 않습니다.** 이 폴더에는 빈 서식·규칙·검사 스크립트만 있고,
+채운 인터뷰·명렬표·학생 글·세특 초안은 전부 스킬 밖 작업 폴더에 둡니다.
+README 의 형광펜 화면 그림도 지어낸 예시입니다.

@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 1000쌤 (@iooo_tttt)
+Copyright (c) 2026 pblsketch (GEP-AI Project)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+적용 대상: skills/student-record-pipeline/references/achievement-standards-2022.csv
+  (gepai-mcp 의 data/source/achievement-standards.csv 를 무가공 그대로 가져옴)
